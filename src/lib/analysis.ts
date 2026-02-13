@@ -1,4 +1,5 @@
 import type { Narrative, RunPayload } from './types'
+import { clusterByTopics, narrativeFromCluster } from './narratives'
 import { makeWindows, pctChange } from './windows'
 import { fetchRepoCommitCountSince, fetchRepoMetrics } from './sources/github'
 import { countRssInWindow, fetchRss } from './sources/rss'
@@ -59,7 +60,7 @@ export async function generateRun(): Promise<RunPayload> {
   const commitsPrev14d = Math.max(0, commits28d - commits14d)
   const commitsPct = pctChange(commitsPrev14d, commits14d)
 
-  const narratives: Narrative[] = [
+  const baseNarratives: Narrative[] = [
     {
       id: 'onchain-program-velocity',
       title: 'On-chain shipping velocity is accelerating (program upgrades/deploys)',
@@ -134,6 +135,23 @@ export async function generateRun(): Promise<RunPayload> {
       ],
     },
   ]
+
+  // Topic clustering from RSS headlines to increase narrative originality (8–12 narratives)
+  const rssClusters = clusterByTopics(feeds)
+  const topicNarratives = rssClusters.map((c) => {
+    const pct = pctChange(rssPrev, rssCur)
+    const score = scoreFromSignals({ rssPct: pct, githubPct: commitsPct, onchainPct: onchain.pctChangeUpgradeableLoader, bonus: Math.min(3, c.hits.length / 3) })
+    return narrativeFromCluster({
+      topic: c.topic,
+      hits: c.hits,
+      score,
+      rssCur: c.hits.length,
+      rssPrev: 0,
+      rssPct: 999,
+    })
+  })
+
+  const narratives: Narrative[] = [...baseNarratives, ...topicNarratives].slice(0, 12)
 
   const payload: RunPayload = {
     windowFrom: windows.current.from.toISOString(),

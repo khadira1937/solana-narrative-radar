@@ -148,7 +148,11 @@ export default function Home() {
                             {typeof e.pctChange === 'number' && <span className="tag">{e.pctChange}%</span>}
                           </div>
                         </div>
-                        {(e.notes || e.value) && <div className="mt-1 text-xs" style={{ color: 'var(--muted-2)' }}>{e.notes || e.value}</div>}
+                        {(e.notes || e.value) && (
+                          <div className="mt-1 text-xs break-words" style={{ color: 'var(--muted-2)' }}>
+                            {e.notes || e.value}
+                          </div>
+                        )}
                         {e.sourceUrl && (
                           <a href={e.sourceUrl} className="mt-1 inline-block text-xs underline hover:no-underline" target="_blank" rel="noreferrer">
                             Source
@@ -178,7 +182,10 @@ export default function Home() {
           <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
             This prototype focuses on explainability: every narrative includes citations and simple, transparent fortnight-over-fortnight deltas.
           </p>
-          <pre className="mt-4 overflow-auto rounded-lg p-4 text-xs" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border)', color: 'rgba(234,252,250,0.85)' }}>
+          <pre
+            className="mt-4 max-h-[420px] overflow-auto rounded-lg p-4 text-xs"
+            style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border)', color: 'rgba(234,252,250,0.85)' }}
+          >
             {JSON.stringify(run.sources, null, 2)}
           </pre>
         </div>

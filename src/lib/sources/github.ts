@@ -36,3 +36,22 @@ export async function fetchRepoMetrics(repos: string[]): Promise<RepoMetric[]> {
   }
   return out
 }
+
+export async function fetchRepoCommitCountSince(fullName: string, sinceIso: string): Promise<number> {
+  // GitHub paginates. We'll fetch up to 3 pages (300 commits) to keep it lightweight.
+  let page = 1
+  let count = 0
+  while (page <= 3) {
+    const res = await fetch(
+      `https://api.github.com/repos/${fullName}/commits?since=${encodeURIComponent(sinceIso)}&per_page=100&page=${page}`,
+      { headers: ghHeaders(), next: { revalidate: 0 } }
+    )
+    if (!res.ok) return count
+    const j = (await res.json()) as unknown
+    if (!Array.isArray(j)) return count
+    count += j.length
+    if (j.length < 100) break
+    page += 1
+  }
+  return count
+}

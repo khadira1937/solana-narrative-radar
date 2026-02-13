@@ -29,3 +29,11 @@ export async function fetchRss(urls: { name: string; url: string }[], takePerFee
   }
   return items
 }
+
+export function countRssInWindow(items: RssItem[], window: { from: Date; to: Date }) {
+  return items.filter((i) => {
+    const d = i.pubDate ? new Date(i.pubDate).getTime() : NaN
+    if (!Number.isFinite(d)) return false
+    return d >= window.from.getTime() && d < window.to.getTime()
+  }).length
+}

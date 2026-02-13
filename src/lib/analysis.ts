@@ -1,6 +1,7 @@
 import type { Narrative, RunPayload } from './types'
-import { fetchRepoMetrics } from './sources/github'
-import { fetchRss } from './sources/rss'
+import { makeWindows, pctChange } from './windows'
+import { fetchRepoCommitCountSince, fetchRepoMetrics } from './sources/github'
+import { countRssInWindow, fetchRss } from './sources/rss'
 import { fetchOnchainSignals } from './sources/solana'
 
 // Curated repo list (small on purpose; reproducible without rate-limit pain)
@@ -15,103 +16,149 @@ const DEFAULT_REPOS = [
 const DEFAULT_FEEDS = [
   { name: 'Solana Blog', url: 'https://solana.com/rss.xml' },
   { name: 'Helius Blog', url: 'https://www.helius.dev/blog/rss.xml' },
+  { name: 'Solana Compass', url: 'https://solanacompass.com/rss' },
 ]
 
 // This is intentionally simple + transparent.
 // In 48h, explainability > fancy ML.
 function scoreFromSignals(signals: {
-  ghStarsDelta?: number
-  ghRepoCount?: number
-  onchainUpgradeableTxCount?: number
-  rssMentions?: number
+  onchainPct?: number
+  githubPct?: number
+  rssPct?: number
+  bonus?: number
 }) {
-  const a = Math.min(30, Math.max(0, (signals.ghStarsDelta || 0) / 50))
-  const b = Math.min(30, Math.max(0, ((signals.onchainUpgradeableTxCount || 0) - 50) / 10))
-  const c = Math.min(20, Math.max(0, (signals.rssMentions || 0) * 2))
-  const d = Math.min(20, Math.max(0, (signals.ghRepoCount || 0) * 2))
+  const a = Math.min(40, Math.max(0, (signals.onchainPct || 0) / 5))
+  const b = Math.min(35, Math.max(0, (signals.githubPct || 0) / 5))
+  const c = Math.min(20, Math.max(0, (signals.rssPct || 0) / 10))
+  const d = Math.min(5, Math.max(0, signals.bonus || 0))
   return Math.round((a + b + c + d) * 10) / 10
 }
 
 export async function generateRun(): Promise<RunPayload> {
-  const windowTo = new Date()
-  const windowFrom = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const windows = makeWindows(now)
 
   const [repos, feeds, onchain] = await Promise.all([
     fetchRepoMetrics(DEFAULT_REPOS),
-    fetchRss(DEFAULT_FEEDS, 12),
-    fetchOnchainSignals(200),
+    fetchRss(DEFAULT_FEEDS, 30),
+    fetchOnchainSignals({ current: windows.current, previous: windows.previous, limit: 1000 }),
   ])
 
-  // Heuristic: derive a few narratives from observed signals.
-  // (Judges want clear logic + evidence; not necessarily perfect detection.)
-  const rssCount = feeds.length
+  const rssCur = countRssInWindow(feeds, windows.current)
+  const rssPrev = countRssInWindow(feeds, windows.previous)
+  const rssPct = pctChange(rssPrev, rssCur)
+
+  // Commit activity across curated repos
+  const sinceCur = windows.current.from.toISOString()
+  const sincePrev = windows.previous.from.toISOString()
+  // We'll approximate: commits in last 14d vs commits in last 28d, then infer previous 14d.
+  const commitCounts28d = await Promise.all(DEFAULT_REPOS.map((r) => fetchRepoCommitCountSince(r, sincePrev)))
+  const commitCounts14d = await Promise.all(DEFAULT_REPOS.map((r) => fetchRepoCommitCountSince(r, sinceCur)))
+  const commits28d = commitCounts28d.reduce((a, b) => a + b, 0)
+  const commits14d = commitCounts14d.reduce((a, b) => a + b, 0)
+  const commitsPrev14d = Math.max(0, commits28d - commits14d)
+  const commitsPct = pctChange(commitsPrev14d, commits14d)
 
   const narratives: Narrative[] = [
     {
-      id: 'onchain-program-churn',
-      title: 'Rising on-chain program deployment/upgrade activity',
-      score: scoreFromSignals({ onchainUpgradeableTxCount: onchain.upgradeableLoaderTxCount, rssMentions: rssCount }),
+      id: 'onchain-program-velocity',
+      title: 'On-chain shipping velocity is accelerating (program upgrades/deploys)',
+      score: scoreFromSignals({ onchainPct: onchain.pctChangeUpgradeableLoader, githubPct: commitsPct, rssPct: rssPct, bonus: 2 }),
       summary:
-        'Upgradeable loader activity is a lightweight proxy for program deployments and upgrades. Spikes can indicate new launches, rapid iteration cycles, or ecosystem events driving shipping velocity.',
+        'We approximate Solana “shipping velocity” by counting recent BPF Upgradeable Loader transactions and comparing fortnight-over-fortnight. Spikes can indicate launch waves or rapid iteration by teams.',
       evidence: [
         {
-          label: 'Upgradeable Loader recent tx sample (limit=200)',
-          value: onchain.upgradeableLoaderTxCount,
-          notes: `Sample signatures: ${onchain.sampleSignatures.slice(0, 3).join(', ')}…`,
+          label: 'Upgradeable Loader tx (current 14d vs previous 14d)',
+          value: onchain.upgradeableLoaderTxCountCurrent,
+          delta: onchain.upgradeableLoaderTxCountCurrent - onchain.upgradeableLoaderTxCountPrevious,
+          pctChange: onchain.pctChangeUpgradeableLoader,
+          notes: `Current=${onchain.upgradeableLoaderTxCountCurrent}, Prev=${onchain.upgradeableLoaderTxCountPrevious}. Sample sigs: ${onchain.sampleSignatures.slice(0, 3).join(', ')}…`,
         },
       ],
       ideas: [
-        'A “Launch Radar” that flags new programs + categorizes by first 100 users using on-chain heuristics.',
-        'A deployment anomaly monitor for protocol teams (spikes in upgrades, unusual upgrade cadence).',
-        'A “Program health page” generator that produces an explainer + usage charts for any program id.',
+        'A “Program Launch Radar” that highlights newly-upgraded programs + first-user growth hints.',
+        'A release-cadence tracker for protocol teams (upgrade frequency, deploy anomalies, changelog reminders).',
+        'A “Program health page” generator (explainers + usage + risk flags) for any program id.',
       ],
     },
     {
-      id: 'dev-tooling-momentum',
-      title: 'Developer tooling + infra accelerating (Anchor / SDKs / clients)',
-      score: scoreFromSignals({ ghRepoCount: repos.length, ghStarsDelta: 0, rssMentions: Math.min(10, rssCount) }),
+      id: 'dev-activity-fortnight',
+      title: 'Developer activity is rising (commit momentum across core repos)',
+      score: scoreFromSignals({ githubPct: commitsPct, rssPct: rssPct, onchainPct: onchain.pctChangeUpgradeableLoader, bonus: 1 }),
       summary:
-        'Core repos and SDKs are still the center of gravity. Even without perfect star deltas, tracking push activity + release cadence gives an early signal of tooling narratives.',
-      evidence: repos.slice(0, 5).map((r) => ({
-        label: `GitHub: ${r.fullName}`,
-        notes: `stars=${r.stars}, forks=${r.forks}, openIssues=${r.openIssues}, pushedAt=${r.pushedAt}`,
-        sourceUrl: `https://github.com/${r.fullName}`,
-      })),
+        'We track commit counts on a curated set of Solana core repos and compare the last fortnight against the prior fortnight. This helps surface early infra/tooling narratives.',
+      evidence: [
+        {
+          label: 'Commits across curated repos (current 14d vs previous 14d)',
+          value: commits14d,
+          delta: commits14d - commitsPrev14d,
+          pctChange: commitsPct,
+          notes: `Curated repos: ${DEFAULT_REPOS.join(', ')}`,
+        },
+        ...repos.slice(0, 5).map((r) => ({
+          label: `GitHub repo snapshot: ${r.fullName}`,
+          notes: `stars=${r.stars}, forks=${r.forks}, openIssues=${r.openIssues}, pushedAt=${r.pushedAt}`,
+          sourceUrl: `https://github.com/${r.fullName}`,
+        })),
+      ],
       ideas: [
-        'A “Solana DX scoreboard” ranking repos by meaningful activity (releases, commits, issue velocity).',
-        'A PR-review assistant focused on Solana program safety (account constraints, signer checks).',
-        'A template generator that outputs production-ready Solana dApp scaffolds (program + indexer + UI).',
+        'A Solana “DX Momentum” dashboard ranking repos by releases + commits + issue velocity.',
+        'An automated PR reviewer specialized for Solana program safety (account constraints, signer checks).',
+        'A production-ready dApp scaffold generator (program + indexer + UI + tests) keyed by narrative.',
       ],
     },
     {
-      id: 'ecosystem-research-to-product',
-      title: 'Research-to-product loop getting tighter (reports → builds)',
-      score: scoreFromSignals({ rssMentions: rssCount, ghRepoCount: repos.length, onchainUpgradeableTxCount: onchain.upgradeableLoaderTxCount }),
+      id: 'discourse-signal',
+      title: 'Ecosystem discourse is picking up (research/blog cadence)',
+      score: scoreFromSignals({ rssPct: rssPct, githubPct: commitsPct, bonus: 1 }),
       summary:
-        'Blogs and reports often precede build waves. A tool that ties discourse signals to on-chain reality can surface narratives before they become obvious.',
-      evidence: feeds.slice(0, 8).map((it) => ({
-        label: `RSS: ${it.source}`,
-        notes: it.title,
-        sourceUrl: it.link,
-      })),
+        'We treat research/blog cadence as a weak-but-useful leading signal: when publishing volume rises, it often precedes new build waves. We count RSS items per fortnight and show citations.',
+      evidence: [
+        {
+          label: 'RSS items (current 14d vs previous 14d)',
+          value: rssCur,
+          delta: rssCur - rssPrev,
+          pctChange: rssPct,
+          notes: `Feeds: ${DEFAULT_FEEDS.map((f) => f.name).join(', ')}`,
+        },
+        ...feeds.slice(0, 10).map((it) => ({
+          label: `RSS: ${it.source}`,
+          notes: it.title,
+          sourceUrl: it.link,
+        })),
+      ],
       ideas: [
-        'A fortnightly “narrative memo” generator with citations + on-chain supporting charts.',
-        'A “what to build next” board that maps narratives to unmet UX gaps and existing competitors.',
-        'A repo starter kit that takes a narrative and generates a spec + milestones + MVP UI screens.',
+        'A fortnightly narrative memo generator with citations + on-chain supporting charts.',
+        'A “build ideas board” that maps narratives to user pain points + existing competitors.',
+        'A “signal-to-spec” tool that turns a narrative into a PRD + milestones + UX wireframes.',
       ],
     },
   ]
 
   const payload: RunPayload = {
-    windowFrom: windowFrom.toISOString(),
-    windowTo: windowTo.toISOString(),
+    windowFrom: windows.current.from.toISOString(),
+    windowTo: windows.current.to.toISOString(),
     narratives,
     sources: {
-      solana: { rpc: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', method: 'getSignaturesForAddress(BPFLoaderUpgradeable)', limit: 200 },
-      github: { repos: DEFAULT_REPOS, tokenUsed: Boolean(process.env.GITHUB_TOKEN) },
+      windows: {
+        current: { from: windows.current.from.toISOString(), to: windows.current.to.toISOString() },
+        previous: { from: windows.previous.from.toISOString(), to: windows.previous.to.toISOString() },
+      },
+      solana: {
+        rpc: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+        method: 'getSignaturesForAddress(BPFLoaderUpgradeable)',
+        limit: 1000,
+      },
+      github: {
+        repos: DEFAULT_REPOS,
+        tokenUsed: Boolean(process.env.GITHUB_TOKEN),
+        method: 'repos/{full_name} + commits?since=... (capped to 3 pages)'
+      },
       rss: { feeds: DEFAULT_FEEDS },
+      scoring:
+        'score = clamp(onchain_pct/5,0..40)+clamp(github_pct/5,0..35)+clamp(rss_pct/10,0..20)+bonus(0..5). Deltas are fortnight-over-fortnight.',
       notes:
-        'This prototype prioritizes explainability and reproducibility. It uses stable, public data sources and simple transparent scoring. It is designed to be extended with richer on-chain metrics, social signals, and better clustering.'
+        'Prototype: prioritizes explainability and reproducibility. Extend with richer on-chain metrics (unique wallets, program-level usage spikes) and additional discourse sources.'
     },
   }
 

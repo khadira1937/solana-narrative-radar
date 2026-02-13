@@ -33,15 +33,22 @@ Optional:
 - A curated RSS feed list (e.g., Solana blog, Helius blog)
 - Items are collected and used as evidence/citations
 
-> Note: The bounty mentions social signals (X/Discord/etc.). Those can be added later, but this prototype prioritizes **reproducibility** and avoids fragile scraping.
+> Note: The bounty mentions social signals (X/Discord/etc.). This prototype prioritizes **reproducibility** and avoids fragile scraping. In the next iteration, add social sources via official APIs (or curated, cited links) to keep it compliant and verifiable.
 
 ## How signals are detected and ranked
 This is a transparent scoring approach (no black box):
 
 1. Collect signals from the sources above.
-2. Convert them into simple features (counts, deltas, activity proxies).
-3. Compute a narrative score using a **weighted, capped sum** of signal features.
+2. Convert them into simple features (counts + **fortnight deltas**).
+3. Compute a narrative score using a **weighted, capped sum** of signal deltas.
 4. For every narrative, show an **evidence panel** so judges can verify why it was detected.
+
+### Fortnight windows
+The tool compares:
+- **Current window:** last 14 days
+- **Previous window:** the 14 days before that
+
+This is what makes narratives “emerging/accelerating” rather than static snapshots.
 
 ## Detected narratives + build ideas
 The dashboard shows:

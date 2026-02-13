@@ -60,8 +60,10 @@ export const TOPICS: Topic[] = [
   },
 ]
 
-export function clusterByTopics(items: { title: string; link?: string; source: string }[]) {
-  const clusters: Record<string, { topic: Topic; hits: { title: string; link?: string; source: string }[] }> = {}
+export type RssHit = { title: string; link?: string; source: string; pubDate?: string }
+
+export function clusterByTopics(items: RssHit[]) {
+  const clusters: Record<string, { topic: Topic; hits: RssHit[] }> = {}
   for (const t of TOPICS) clusters[t.id] = { topic: t, hits: [] }
 
   for (const it of items) {
@@ -73,13 +75,12 @@ export function clusterByTopics(items: { title: string; link?: string; source: s
     }
   }
 
-  // remove empty clusters
   return Object.values(clusters).filter((c) => c.hits.length > 0)
 }
 
 export function narrativeFromCluster(params: {
   topic: Topic
-  hits: { title: string; link?: string; source: string }[]
+  hits: RssHit[]
   score: number
   rssCur: number
   rssPrev: number

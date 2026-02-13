@@ -130,7 +130,7 @@ export default function Home() {
         )}
       </div>
 
-      {run?.sources && (
+      {!!run?.sources && (
         <div className="mt-10 rounded-lg border bg-white p-6">
           <h3 className="text-base font-semibold">Sources & methodology (prototype)</h3>
           <pre className="mt-3 overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">

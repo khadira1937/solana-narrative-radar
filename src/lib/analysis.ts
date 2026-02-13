@@ -141,35 +141,40 @@ export async function generateRun(): Promise<RunPayload> {
 
   // Topic clustering from RSS headlines to increase narrative originality (8–12 narratives)
   const rssClusters = clusterByTopics(feeds)
-  const topicNarratives = rssClusters.map((c) => {
-    const inWin = (d: string | undefined, from: Date, to: Date) => {
-      if (!d) return false
-      const t = new Date(d).getTime()
-      return Number.isFinite(t) && t >= from.getTime() && t < to.getTime()
-    }
+  const topicNarratives = rssClusters
+    .map((c) => {
+      const inWin = (d: string | undefined, from: Date, to: Date) => {
+        if (!d) return false
+        const t = new Date(d).getTime()
+        return Number.isFinite(t) && t >= from.getTime() && t < to.getTime()
+      }
 
-    const curHits = c.hits.filter((h) => inWin(h.pubDate, windows.current.from, windows.current.to))
-    const prevHits = c.hits.filter((h) => inWin(h.pubDate, windows.previous.from, windows.previous.to))
-    const cur = curHits.length
-    const prev = prevHits.length
-    const pct = pctChange(prev, cur)
+      const curHits = c.hits.filter((h) => inWin(h.pubDate, windows.current.from, windows.current.to))
+      const prevHits = c.hits.filter((h) => inWin(h.pubDate, windows.previous.from, windows.previous.to))
+      const cur = curHits.length
+      const prev = prevHits.length
+      const pct = pctChange(prev, cur)
 
-    const score = scoreFromSignals({
-      rssPct: pct,
-      githubPct: commitsPct,
-      onchainPct: onchain.pctChangeUpgradeableLoader,
-      bonus: Math.min(3, cur / 3),
+      // If a topic has zero mentions this fortnight, it isn't an "emerging" narrative right now.
+      if (cur === 0) return null
+
+      const score = scoreFromSignals({
+        rssPct: pct,
+        githubPct: commitsPct,
+        onchainPct: onchain.pctChangeUpgradeableLoader,
+        bonus: Math.min(3, cur / 3),
+      })
+
+      return narrativeFromCluster({
+        topic: c.topic,
+        hits: curHits,
+        score,
+        rssCur: cur,
+        rssPrev: prev,
+        rssPct: pct,
+      })
     })
-
-    return narrativeFromCluster({
-      topic: c.topic,
-      hits: curHits.length ? curHits : c.hits,
-      score,
-      rssCur: cur,
-      rssPrev: prev,
-      rssPct: pct,
-    })
-  })
+    .filter(Boolean) as Narrative[]
 
   const narratives: Narrative[] = [...baseNarratives, ...topicNarratives].slice(0, 12)
 

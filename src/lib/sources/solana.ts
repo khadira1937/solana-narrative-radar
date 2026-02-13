@@ -15,12 +15,36 @@ export function getSolanaConnection() {
   return new Connection(url, 'confirmed')
 }
 
-export async function fetchOnchainSignals(params: { current: { from: Date; to: Date }; previous: { from: Date; to: Date }; limit?: number }): Promise<OnchainSignals> {
+export async function fetchOnchainSignals(params: {
+  current: { from: Date; to: Date }
+  previous: { from: Date; to: Date }
+  limit?: number
+}): Promise<OnchainSignals> {
   const conn = getSolanaConnection()
-  const limit = params.limit ?? 1000
-  const sigs = await conn.getSignaturesForAddress(BPF_UPGRADEABLE_LOADER, { limit })
+  const pageSize = 1000
+  const max = params.limit ?? 6000
 
   const toMs = (bt?: number | null) => (bt ? bt * 1000 : NaN)
+
+  const sigs: Awaited<ReturnType<Connection['getSignaturesForAddress']>> = []
+  let before: string | undefined
+
+  // Paginate until we have enough signatures OR we've gone older than the previous window.
+  while (sigs.length < max) {
+    const batch = await conn.getSignaturesForAddress(BPF_UPGRADEABLE_LOADER, {
+      limit: Math.min(pageSize, max - sigs.length),
+      before,
+    })
+    if (!batch.length) break
+    sigs.push(...batch)
+
+    const oldest = batch[batch.length - 1]
+    const oldestMs = toMs(oldest.blockTime)
+    if (Number.isFinite(oldestMs) && oldestMs < params.previous.from.getTime()) break
+
+    before = oldest.signature
+  }
+
   const cur = sigs.filter((s) => {
     const t = toMs(s.blockTime)
     return Number.isFinite(t) && t >= params.current.from.getTime() && t < params.current.to.getTime()

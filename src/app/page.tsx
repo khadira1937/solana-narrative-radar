@@ -63,10 +63,15 @@ export default function Home() {
               Detect emerging Solana narratives by comparing the last 14 days vs the previous 14 days, with evidence and build ideas.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--muted-2)' }}>
-              <span>Hosted report:</span>
+              <span>Report:</span>
+              <a className="underline hover:no-underline" href="/report" rel="noreferrer">
+                /report
+              </a>
+              <span className="opacity-70">(markdown export: </span>
               <a className="underline hover:no-underline" href="/api/report" target="_blank" rel="noreferrer">
                 /api/report
               </a>
+              <span className="opacity-70">)</span>
               <span>•</span>
               <span>Refresh: click “Run analysis”</span>
             </div>

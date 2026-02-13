@@ -51,12 +51,25 @@ The tool compares:
 This is what makes narratives “emerging/accelerating” rather than static snapshots.
 
 ## Detected narratives + build ideas
-The dashboard shows:
-- A ranked list of narratives
-- For each narrative:
-  - explanation/summary
-  - evidence items (metrics + links)
-  - 3–5 build ideas tied to that narrative
+The tool produces a ranked list of narratives and for each narrative:
+- explanation/summary
+- evidence items (metrics + citations)
+- **3–5 build ideas** tied to that narrative
+
+### Where to see the full narrative list
+Because narratives are refreshed each run, the authoritative list is in:
+- UI: `/report`
+- Markdown export: `/api/report`
+
+These endpoints include the complete list of detected narratives and their build ideas for the current run.
+
+### Built-in narrative families (what the tool is designed to detect)
+The tool clusters discourse signals into Solana-relevant narrative families such as:
+- RWAs & tokenized assets
+- Stablecoins & payments
+- MEV/validators/performance engineering
+- Developer tooling & infra
+- DeFi primitives (AMMs/perps/options)
 
 ## Reproduce / run locally
 

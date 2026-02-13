@@ -18,6 +18,9 @@ const DEFAULT_FEEDS = [
   { name: 'Solana Blog', url: 'https://solana.com/rss.xml' },
   { name: 'Helius Blog', url: 'https://www.helius.dev/blog/rss.xml' },
   { name: 'Solana Compass', url: 'https://solanacompass.com/rss' },
+  // More ecosystem discourse sources (public + reproducible)
+  { name: 'Solana Foundation Medium', url: 'https://medium.com/feed/solana-foundation' },
+  { name: 'Jito Blog', url: 'https://www.jito.network/blog/rss.xml' },
 ]
 
 // This is intentionally simple + transparent.

@@ -1,6 +1,6 @@
 export type NarrativeEvidence = {
   label: string
-  value?: number
+  value?: number | string
   delta?: number
   pctChange?: number
   sourceUrl?: string

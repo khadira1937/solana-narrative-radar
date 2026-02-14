@@ -7,6 +7,11 @@ export type OnchainSignals = {
   upgradeableLoaderTxCountCurrent: number
   upgradeableLoaderTxCountPrevious: number
   pctChangeUpgradeableLoader: number
+  uniqueFeePayersCurrent: number
+  uniqueFeePayersPrevious: number
+  pctChangeUniqueFeePayers: number
+  failureRateCurrentPct: number
+  failureRatePreviousPct: number
   sampleSignatures: string[]
 }
 
@@ -56,10 +61,54 @@ export async function fetchOnchainSignals(params: {
 
   const pct = prev.length === 0 ? (cur.length === 0 ? 0 : 999) : ((cur.length - prev.length) / prev.length) * 100
 
+  // Extra on-chain indicators (lightweight, explainable):
+  // - unique fee payers (wallet participation proxy)
+  // - failure rate (stress/instability proxy)
+  // We only sample a limited number of txs to keep this fast + reproducible.
+  const SAMPLE_TXS = 220
+  const curSample = cur.slice(0, SAMPLE_TXS)
+  const prevSample = prev.slice(0, SAMPLE_TXS)
+
+  async function hydrate(signatures: { signature: string }[]) {
+    const txs = await Promise.all(
+      signatures.map((s) =>
+        conn
+          .getTransaction(s.signature, { maxSupportedTransactionVersion: 0 })
+          .catch(() => null),
+      ),
+    )
+    const feePayers = new Set<string>()
+    let failed = 0
+    let total = 0
+    for (const tx of txs) {
+      if (!tx) continue
+      total++
+      const msg: any = tx.transaction.message as any
+      const payerKey =
+        msg.accountKeys?.[0] || msg.staticAccountKeys?.[0] || msg.getAccountKeys?.().staticAccountKeys?.[0] || null
+      const payer = payerKey?.toBase58?.()
+      if (payer) feePayers.add(payer)
+      if (tx.meta?.err) failed++
+    }
+    const failureRatePct = total === 0 ? 0 : (failed / total) * 100
+    return { uniqueFeePayers: feePayers.size, failureRatePct: Math.round(failureRatePct * 10) / 10 }
+  }
+
+  const [curHyd, prevHyd] = await Promise.all([hydrate(curSample), hydrate(prevSample)])
+  const pctFeePayers = prevHyd.uniqueFeePayers === 0 ? (curHyd.uniqueFeePayers === 0 ? 0 : 999) : ((curHyd.uniqueFeePayers - prevHyd.uniqueFeePayers) / prevHyd.uniqueFeePayers) * 100
+
   return {
     upgradeableLoaderTxCountCurrent: cur.length,
     upgradeableLoaderTxCountPrevious: prev.length,
     pctChangeUpgradeableLoader: Math.round(pct * 10) / 10,
+
+    uniqueFeePayersCurrent: curHyd.uniqueFeePayers,
+    uniqueFeePayersPrevious: prevHyd.uniqueFeePayers,
+    pctChangeUniqueFeePayers: Math.round(pctFeePayers * 10) / 10,
+
+    failureRateCurrentPct: curHyd.failureRatePct,
+    failureRatePreviousPct: prevHyd.failureRatePct,
+
     sampleSignatures: sigs.slice(0, 10).map((s) => s.signature),
   }
 }

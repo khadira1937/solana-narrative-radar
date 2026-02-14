@@ -4,6 +4,7 @@ import { makeWindows, pctChange } from './windows'
 import { fetchRepoCommitCountSince, fetchRepoMetrics } from './sources/github'
 import { countRssInWindow, fetchRss } from './sources/rss'
 import { fetchOnchainSignals } from './sources/solana'
+import { fetchXSignals } from './sources/x'
 import { CURATED_BLOGS, CURATED_DISCORD, CURATED_X } from './curated'
 
 // Curated repo list (small on purpose; reproducible without rate-limit pain)
@@ -37,23 +38,30 @@ function scoreFromSignals(signals: {
   onchainPct?: number
   githubPct?: number
   rssPct?: number
+  socialPct?: number
   bonus?: number
 }) {
-  const a = Math.min(40, Math.max(0, (signals.onchainPct || 0) / 5))
-  const b = Math.min(35, Math.max(0, (signals.githubPct || 0) / 5))
-  const c = Math.min(20, Math.max(0, (signals.rssPct || 0) / 10))
+  const a = Math.min(35, Math.max(0, (signals.onchainPct || 0) / 5))
+  const b = Math.min(30, Math.max(0, (signals.githubPct || 0) / 5))
+  const c = Math.min(15, Math.max(0, (signals.rssPct || 0) / 10))
+  const s = Math.min(15, Math.max(0, (signals.socialPct || 0) / 10))
   const d = Math.min(5, Math.max(0, signals.bonus || 0))
-  return Math.round((a + b + c + d) * 10) / 10
+  return Math.round((a + b + c + s + d) * 10) / 10
 }
 
 export async function generateRun(): Promise<RunPayload> {
   const now = new Date()
   const windows = makeWindows(now)
 
-  const [repos, feeds, onchain] = await Promise.all([
+  const [repos, feeds, onchain, xSignals] = await Promise.all([
     fetchRepoMetrics(DEFAULT_REPOS),
     fetchRss(DEFAULT_FEEDS, 30),
     fetchOnchainSignals({ current: windows.current, previous: windows.previous, limit: 1000 }),
+    fetchXSignals({
+      usernames: CURATED_X.map((l) => l.label),
+      current: windows.current,
+      previous: windows.previous,
+    }).catch(() => ({ tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] })),
   ])
 
   const rssCur = countRssInWindow(feeds, windows.current)
@@ -74,10 +82,16 @@ export async function generateRun(): Promise<RunPayload> {
   const baseNarratives: Narrative[] = [
     {
       id: 'onchain-program-velocity',
-      title: 'On-chain shipping velocity is accelerating (program upgrades/deploys)',
-      score: scoreFromSignals({ onchainPct: onchain.pctChangeUpgradeableLoader, githubPct: commitsPct, rssPct: rssPct, bonus: 2 }),
+      title: 'On-chain shipping velocity is accelerating (deploy/upgrade + wallet participation)',
+      score: scoreFromSignals({
+        onchainPct: onchain.pctChangeUpgradeableLoader,
+        githubPct: commitsPct,
+        rssPct: rssPct,
+        socialPct: xSignals.pctChangeTweets,
+        bonus: 2,
+      }),
       summary:
-        'We approximate Solana “shipping velocity” by counting recent BPF Upgradeable Loader transactions and comparing fortnight-over-fortnight. Spikes can indicate launch waves or rapid iteration by teams.',
+        'We approximate Solana “shipping velocity” by counting BPF Upgradeable Loader activity and adding lightweight wallet-participation and failure-rate proxies. Spikes can indicate launch waves, rapid iteration, or infra churn.',
       evidence: [
         {
           label: 'Upgradeable Loader tx (current 14d vs previous 14d)',
@@ -86,17 +100,29 @@ export async function generateRun(): Promise<RunPayload> {
           pctChange: onchain.pctChangeUpgradeableLoader,
           notes: `Current=${onchain.upgradeableLoaderTxCountCurrent}, Prev=${onchain.upgradeableLoaderTxCountPrevious}. Sample sigs: ${onchain.sampleSignatures.slice(0, 3).join(', ')}…`,
         },
+        {
+          label: 'Unique fee payers in loader tx sample (wallet participation proxy)',
+          value: onchain.uniqueFeePayersCurrent,
+          delta: onchain.uniqueFeePayersCurrent - onchain.uniqueFeePayersPrevious,
+          pctChange: onchain.pctChangeUniqueFeePayers,
+          notes: 'Computed from a small, reproducible sample of loader transactions (fast + explainable).',
+        },
+        {
+          label: 'Failure rate in loader tx sample (stress proxy)',
+          value: `${onchain.failureRateCurrentPct}%`,
+          notes: `Current=${onchain.failureRateCurrentPct}%, Prev=${onchain.failureRatePreviousPct}%`,
+        },
       ],
       ideas: [
-        'A “Program Launch Radar” that highlights newly-upgraded programs + first-user growth hints.',
-        'A release-cadence tracker for protocol teams (upgrade frequency, deploy anomalies, changelog reminders).',
-        'A “Program health page” generator (explainers + usage + risk flags) for any program id.',
+        'A “Program Launch Radar” that highlights newly-upgraded programs + first-user growth hints.\nMVP: top upgraded programs + links + deployment timeline.\nMetric: users clicking through / tracking a program.',
+        'A release-cadence tracker for protocol teams (upgrade frequency, deploy anomalies, changelog reminders).\nMVP: weekly/fortnight digest + anomaly alerts.\nMetric: subscribed teams + alert click-through.',
+        'A “Program health page” generator (explainers + usage + risk flags) for any program id.\nMVP: auto-page with citations + recent activity.\nMetric: generated pages shared externally.',
       ],
     },
     {
       id: 'dev-activity-fortnight',
       title: 'Developer activity is rising (commit momentum across core repos)',
-      score: scoreFromSignals({ githubPct: commitsPct, rssPct: rssPct, onchainPct: onchain.pctChangeUpgradeableLoader, bonus: 1 }),
+      score: scoreFromSignals({ githubPct: commitsPct, rssPct: rssPct, onchainPct: onchain.pctChangeUpgradeableLoader, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
       summary:
         'We track commit counts on a curated set of Solana core repos and compare the last fortnight against the prior fortnight. This helps surface early infra/tooling narratives.',
       evidence: [
@@ -122,7 +148,7 @@ export async function generateRun(): Promise<RunPayload> {
     {
       id: 'discourse-signal',
       title: 'Ecosystem discourse is picking up (research/blog cadence)',
-      score: scoreFromSignals({ rssPct: rssPct, githubPct: commitsPct, bonus: 1 }),
+      score: scoreFromSignals({ rssPct: rssPct, githubPct: commitsPct, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
       summary:
         'We treat research/blog cadence as a weak-but-useful leading signal: when publishing volume rises, it often precedes new build waves. We count RSS items per fortnight and show citations.',
       evidence: [
@@ -132,6 +158,16 @@ export async function generateRun(): Promise<RunPayload> {
           delta: rssCur - rssPrev,
           pctChange: rssPct,
           notes: `Feeds: ${DEFAULT_FEEDS.map((f) => f.name).join(', ')}`,
+        },
+        {
+          label: 'X KOL tweet velocity (cur vs prev, curated list; no scraping)',
+          value: xSignals.tweetsCurrent,
+          delta: xSignals.tweetsCurrent - xSignals.tweetsPrevious,
+          pctChange: xSignals.pctChangeTweets,
+          notes: `Top posters: ${xSignals.perUserCurrent
+            .slice(0, 5)
+            .map((u) => `${u.username}(${u.count})`)
+            .join(', ')}`,
         },
         ...feeds.slice(0, 10).map((it) => ({
           label: `RSS: ${it.source}`,
@@ -203,11 +239,17 @@ export async function generateRun(): Promise<RunPayload> {
       github: {
         repos: DEFAULT_REPOS,
         tokenUsed: Boolean(process.env.GITHUB_TOKEN),
-        method: 'repos/{full_name} + commits?since=... (capped to 3 pages)'
+        method: 'repos/{full_name} + commits?since=... (capped to 3 pages)',
+      },
+      x: {
+        enabled: Boolean(process.env.X_BEARER_TOKEN),
+        curatedUsernames: CURATED_X.map((l) => l.label),
+        method: 'GET /2/users/by + /2/users/:id/tweets (exclude replies/retweets) with window bounds',
+        notes: 'Uses official X API only. If disabled, social signals remain as curated links in the report.',
       },
       rss: { feeds: DEFAULT_FEEDS },
       scoring:
-        'score = clamp(onchain_pct/5,0..40)+clamp(github_pct/5,0..35)+clamp(rss_pct/10,0..20)+bonus(0..5). Deltas are fortnight-over-fortnight.',
+        'score = clamp(onchain_pct/5,0..35)+clamp(github_pct/5,0..30)+clamp(rss_pct/10,0..15)+clamp(social_pct/10,0..15)+bonus(0..5). Deltas are fortnight-over-fortnight.',
       notes:
         'Prototype: prioritizes explainability and reproducibility. Extend with richer on-chain metrics (unique wallets, program-level usage spikes) and additional discourse sources.',
       curated: {

@@ -56,7 +56,7 @@ export async function generateRun(): Promise<RunPayload> {
   const [repos, feeds, onchain, xSignals] = await Promise.all([
     fetchRepoMetrics(DEFAULT_REPOS),
     fetchRss(DEFAULT_FEEDS, 30),
-    fetchOnchainSignals({ current: windows.current, previous: windows.previous, limit: 1000 }),
+    fetchOnchainSignals({ current: windows.current, previous: windows.previous, limit: 300 }),
     fetchXSignals({
       usernames: CURATED_X.map((l) => l.label),
       current: windows.current,

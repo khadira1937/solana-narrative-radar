@@ -36,10 +36,16 @@ export async function fetchOnchainSignals(params: {
 
   // Paginate until we have enough signatures OR we've gone older than the previous window.
   while (sigs.length < max) {
-    const batch = await conn.getSignaturesForAddress(BPF_UPGRADEABLE_LOADER, {
-      limit: Math.min(pageSize, max - sigs.length),
-      before,
-    })
+    let batch: Awaited<ReturnType<Connection['getSignaturesForAddress']>>
+    try {
+      batch = await conn.getSignaturesForAddress(BPF_UPGRADEABLE_LOADER, {
+        limit: Math.min(pageSize, max - sigs.length),
+        before,
+      })
+    } catch {
+      // Rate limits / transient errors: degrade gracefully with partial data.
+      break
+    }
     if (!batch.length) break
     sigs.push(...batch)
 
@@ -65,11 +71,16 @@ export async function fetchOnchainSignals(params: {
   // - unique fee payers (wallet participation proxy)
   // - failure rate (stress/instability proxy)
   // We only sample a limited number of txs to keep this fast + reproducible.
-  const SAMPLE_TXS = 220
+  // (And to avoid RPC rate limits.)
+  const SAMPLE_TXS = Number(process.env.ONCHAIN_TX_SAMPLE || 60)
   const curSample = cur.slice(0, SAMPLE_TXS)
   const prevSample = prev.slice(0, SAMPLE_TXS)
 
   async function hydrate(signatures: { signature: string }[]) {
+    if (process.env.ONCHAIN_HYDRATE === '0') {
+      return { uniqueFeePayers: 0, failureRatePct: 0 }
+    }
+
     const txs = await Promise.all(
       signatures.map((s) =>
         conn

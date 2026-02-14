@@ -10,6 +10,11 @@
   --muted-2: rgba(234, 252, 250, 0.55);
   --teal: #37c5b3;
   --purple: #613dff;
+
+  /* Avada/WP-ish spacing + type rhythm */
+  --radius-lg: 1.25rem;
+  --radius-md: 1rem;
+  --shadow-soft: 0 14px 60px rgba(0, 0, 0, 0.35);
 }
 
 @theme inline {
@@ -31,6 +36,7 @@ body {
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
     "Segoe UI Emoji";
+  letter-spacing: 0.01em;
 }
 
 ::selection {
@@ -38,14 +44,15 @@ body {
 }
 
 .panel {
-  border-radius: 1rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--panel);
   backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
 }
 
 .panel-2 {
-  border-radius: 1rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--panel-2);
   backdrop-filter: blur(14px);
@@ -95,10 +102,30 @@ body {
   border-radius: 999px;
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 750;
   background: rgba(55, 197, 179, 0.12);
   border: 1px solid rgba(55, 197, 179, 0.28);
   color: rgba(234, 252, 250, 0.9);
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, rgba(55,197,179,1), rgba(97,61,255,1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.card {
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
 }
 
 /* WordPress-ish “polish”: subtle motion, better hover states, and gentle entrance animations */

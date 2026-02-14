@@ -89,70 +89,53 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      {/* Hero (WordPress landing-page vibe) */}
-      <div className="panel px-6 py-8 animate-fade-up">
-        <div className="flex flex-wrap items-start justify-between gap-8">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-3">
-              <div
-                className="hero-orb h-10 w-10 rounded-2xl"
-                style={{ background: 'linear-gradient(135deg, rgba(55,197,179,1), rgba(97,61,255,1))' }}
-              />
-              <h1 className="text-3xl font-semibold tracking-tight">Solana Narrative Radar</h1>
-              <span className="tag">Fortnight</span>
+      {/* Top bar (Avada/WP dashboard vibe) */}
+      <div className="panel px-6 py-5 animate-fade-up">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="hero-orb h-10 w-10 rounded-2xl"
+              style={{ background: 'linear-gradient(135deg, rgba(55,197,179,1), rgba(97,61,255,1))' }}
+            />
+            <div>
+              <div className="section-title">Solana ecosystem intelligence</div>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+                <span className="brand-gradient">Narrative Radar</span>
+              </h1>
             </div>
-            <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
-              A judge-friendly narrative detection tool: detects emerging Solana narratives by comparing the last 14 days vs the previous 14 days, and outputs evidence + build ideas.
-            </p>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60" aria-label="Run analysis">
-                {loading ? 'Running…' : 'Run analysis'}
-              </button>
-              <a className="btn-ghost" href="/api/report" target="_blank" rel="noreferrer">
-                Export report
-              </a>
-              <a className="btn-ghost" href="/report" rel="noreferrer">
-                View markdown
-              </a>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--muted-2)' }}>
-              <span>Endpoints:</span>
-              <a className="underline hover:no-underline" href="/report" rel="noreferrer">
-                /report
-              </a>
-              <span className="opacity-70">•</span>
-              <a className="underline hover:no-underline" href="/api/report" target="_blank" rel="noreferrer">
-                /api/report
-              </a>
-              <span className="opacity-70">•</span>
-              <a className="underline hover:no-underline" href="/api/latest" target="_blank" rel="noreferrer">
-                /api/latest
-              </a>
-            </div>
+            <span className="tag">Fortnight</span>
           </div>
 
-          <div className="grid w-full max-w-sm gap-3">
-            <div className="panel-2 p-4 hover-lift">
-              <div className="text-xs font-semibold" style={{ color: 'var(--muted-2)' }}>
-                Why this wins
-              </div>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm" style={{ color: 'var(--muted)' }}>
-                <li>Fortnight deltas (emerging, not static)</li>
-                <li>Citations + evidence panel (verifiable)</li>
-                <li>Build ideas mapped to each narrative</li>
-              </ul>
-            </div>
-            <div className="panel-2 p-4 hover-lift">
-              <div className="text-xs font-semibold" style={{ color: 'var(--muted-2)' }}>
-                Social sources
-              </div>
-              <div className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-                Included as a curated list (no scraping) in <a className="underline hover:no-underline" href="/api/report">/api/report</a>.
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60" aria-label="Run analysis">
+              {loading ? 'Running…' : 'Run analysis'}
+            </button>
+            <a className="btn-ghost" href="/api/report" target="_blank" rel="noreferrer">
+              Export report
+            </a>
+            <a className="btn-ghost" href="/report" rel="noreferrer">
+              View markdown
+            </a>
           </div>
+        </div>
+
+        <p className="mt-4 max-w-4xl text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
+          Detect emerging Solana narratives by comparing the last 14 days vs the previous 14 days. Every narrative includes a “Why now” line, verifiable evidence links, and product ideas.
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--muted-2)' }}>
+          <span>Quick access:</span>
+          <a className="underline hover:no-underline" href="/api/report" target="_blank" rel="noreferrer">
+            /api/report
+          </a>
+          <span className="opacity-70">•</span>
+          <a className="underline hover:no-underline" href="/report" rel="noreferrer">
+            /report
+          </a>
+          <span className="opacity-70">•</span>
+          <a className="underline hover:no-underline" href="/api/latest" target="_blank" rel="noreferrer">
+            /api/latest
+          </a>
         </div>
       </div>
 

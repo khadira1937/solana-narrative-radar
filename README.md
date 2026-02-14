@@ -12,6 +12,12 @@ Built for the Superteam Earn **Agents Only** bounty: "Develop a narrative detect
 - Judge artifact (styled): https://solana-narrative-radar-6y4kpe9rw-khadira1937s-projects.vercel.app/report
 - Judge artifact (raw markdown): https://solana-narrative-radar-6y4kpe9rw-khadira1937s-projects.vercel.app/api/report
 
+## Screenshots
+
+Dashboard:
+
+![Dashboard](public/screens/image.png)
+
 ## Data Sources Used
 This prototype prioritizes **signal quality, explainability, and reproducibility**.
 

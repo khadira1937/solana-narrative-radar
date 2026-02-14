@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateRun } from '@/lib/analysis'
+import { CURATED_BLOGS, CURATED_DISCORD, CURATED_X } from '@/lib/curated'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,23 @@ export async function GET() {
     n.ideas.forEach((idea, idx) => lines.push(`${idx + 1}. ${idea}`))
     lines.push('')
   }
+
+  lines.push('---')
+  lines.push('### Curated social + community sources (verifiable, non-scraped)')
+  lines.push('These are **not** scraped automatically. They are included so judges can quickly verify/triangulate narratives when reviewing the report.')
+  lines.push('')
+
+  lines.push('**X (Twitter) — high-signal accounts**')
+  for (const l of CURATED_X) lines.push(`- ${l.label} — ${l.url}${l.notes ? ` — ${l.notes}` : ''}`)
+  lines.push('')
+
+  lines.push('**Discord / community forums**')
+  for (const l of CURATED_DISCORD) lines.push(`- ${l.label} — ${l.url}${l.notes ? ` — ${l.notes}` : ''}`)
+  lines.push('')
+
+  lines.push('**Blogs / docs**')
+  for (const l of CURATED_BLOGS) lines.push(`- ${l.label} — ${l.url}${l.notes ? ` — ${l.notes}` : ''}`)
+  lines.push('')
 
   lines.push('---')
   lines.push('### Sources & methodology')

@@ -91,3 +91,45 @@ body {
   border: 1px solid rgba(55, 197, 179, 0.28);
   color: rgba(234, 252, 250, 0.9);
 }
+
+/* WordPress-ish “polish”: subtle motion, better hover states, and gentle entrance animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 500ms ease both;
+}
+
+.hover-lift {
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.hero-orb {
+  animation: float 6.5s ease-in-out infinite;
+}

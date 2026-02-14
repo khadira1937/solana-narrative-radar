@@ -4,6 +4,7 @@ import { makeWindows, pctChange } from './windows'
 import { fetchRepoCommitCountSince, fetchRepoMetrics } from './sources/github'
 import { countRssInWindow, fetchRss } from './sources/rss'
 import { fetchOnchainSignals } from './sources/solana'
+import { CURATED_BLOGS, CURATED_DISCORD, CURATED_X } from './curated'
 
 // Curated repo list (small on purpose; reproducible without rate-limit pain)
 const DEFAULT_REPOS = [
@@ -21,6 +22,9 @@ const DEFAULT_FEEDS = [
   // More ecosystem discourse sources (public + reproducible)
   { name: 'Solana Foundation Medium', url: 'https://medium.com/feed/solana-foundation' },
   { name: 'Jito Blog', url: 'https://www.jito.network/blog/rss.xml' },
+  // These may occasionally break; fetchRss() safely ignores broken feeds.
+  { name: 'Metaplex (news)', url: 'https://www.metaplex.com/rss.xml' },
+  { name: 'Jupiter (station)', url: 'https://station.jup.ag/rss.xml' },
 ]
 
 // This is intentionally simple + transparent.
@@ -201,7 +205,12 @@ export async function generateRun(): Promise<RunPayload> {
       scoring:
         'score = clamp(onchain_pct/5,0..40)+clamp(github_pct/5,0..35)+clamp(rss_pct/10,0..20)+bonus(0..5). Deltas are fortnight-over-fortnight.',
       notes:
-        'Prototype: prioritizes explainability and reproducibility. Extend with richer on-chain metrics (unique wallets, program-level usage spikes) and additional discourse sources.'
+        'Prototype: prioritizes explainability and reproducibility. Extend with richer on-chain metrics (unique wallets, program-level usage spikes) and additional discourse sources.',
+      curated: {
+        x: CURATED_X,
+        discord: CURATED_DISCORD,
+        blogs: CURATED_BLOGS,
+      },
     },
   }
 

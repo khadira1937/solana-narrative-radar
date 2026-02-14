@@ -1,5 +1,6 @@
 'use client'
 
+import { CURATED_BLOGS, CURATED_DISCORD, CURATED_X } from '@/lib/curated'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type NarrativeView = {
@@ -51,39 +52,69 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <div className="panel px-6 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div>
+      {/* Hero (WordPress landing-page vibe) */}
+      <div className="panel px-6 py-8 animate-fade-up">
+        <div className="flex flex-wrap items-start justify-between gap-8">
+          <div className="max-w-3xl">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(55,197,179,1), rgba(97,61,255,1))' }} />
-              <h1 className="text-2xl font-semibold tracking-tight">Solana Narrative Radar</h1>
+              <div
+                className="hero-orb h-10 w-10 rounded-2xl"
+                style={{ background: 'linear-gradient(135deg, rgba(55,197,179,1), rgba(97,61,255,1))' }}
+              />
+              <h1 className="text-3xl font-semibold tracking-tight">Solana Narrative Radar</h1>
               <span className="tag">Fortnight</span>
             </div>
-            <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-              Detect emerging Solana narratives by comparing the last 14 days vs the previous 14 days, with evidence and build ideas.
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
+              A judge-friendly narrative detection tool: detects emerging Solana narratives by comparing the last 14 days vs the previous 14 days, and outputs evidence + build ideas.
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--muted-2)' }}>
-              <span>Report:</span>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60">
+                {loading ? 'Running…' : 'Run analysis'}
+              </button>
+              <a className="btn-ghost" href="/api/report" target="_blank" rel="noreferrer">
+                Export report
+              </a>
+              <a className="btn-ghost" href="/report" rel="noreferrer">
+                View markdown
+              </a>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--muted-2)' }}>
+              <span>Endpoints:</span>
               <a className="underline hover:no-underline" href="/report" rel="noreferrer">
                 /report
               </a>
-              <span className="opacity-70">(markdown export: </span>
+              <span className="opacity-70">•</span>
               <a className="underline hover:no-underline" href="/api/report" target="_blank" rel="noreferrer">
                 /api/report
               </a>
-              <span className="opacity-70">)</span>
-              <span>•</span>
-              <span>Refresh: click “Run analysis”</span>
+              <span className="opacity-70">•</span>
+              <a className="underline hover:no-underline" href="/api/latest" target="_blank" rel="noreferrer">
+                /api/latest
+              </a>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60">
-              {loading ? 'Running…' : 'Run analysis'}
-            </button>
-            <a className="btn-ghost" href="/api/report" target="_blank" rel="noreferrer">
-              Export report
-            </a>
+          <div className="grid w-full max-w-sm gap-3">
+            <div className="panel-2 p-4 hover-lift">
+              <div className="text-xs font-semibold" style={{ color: 'var(--muted-2)' }}>
+                Why this wins
+              </div>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm" style={{ color: 'var(--muted)' }}>
+                <li>Fortnight deltas (emerging, not static)</li>
+                <li>Citations + evidence panel (verifiable)</li>
+                <li>Build ideas mapped to each narrative</li>
+              </ul>
+            </div>
+            <div className="panel-2 p-4 hover-lift">
+              <div className="text-xs font-semibold" style={{ color: 'var(--muted-2)' }}>
+                Social sources
+              </div>
+              <div className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
+                Included as a curated list (no scraping) in <a className="underline hover:no-underline" href="/api/report">/api/report</a>.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -94,14 +125,14 @@ export default function Home() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="kpi">
+      <div className="mt-6 grid gap-4 md:grid-cols-3 animate-fade-up" style={{ animationDelay: '40ms' }}>
+        <div className="kpi panel-2 hover-lift">
           <div className="text-xs" style={{ color: 'var(--muted-2)' }}>
             Latest run
           </div>
           <div className="mt-1 text-sm font-semibold">{run ? new Date(run.windowTo).toLocaleString() : '—'}</div>
         </div>
-        <div className="kpi">
+        <div className="kpi panel-2 hover-lift">
           <div className="text-xs" style={{ color: 'var(--muted-2)' }}>
             Window
           </div>
@@ -109,11 +140,55 @@ export default function Home() {
             {run ? `${new Date(run.windowFrom).toLocaleDateString()} → ${new Date(run.windowTo).toLocaleDateString()}` : '—'}
           </div>
         </div>
-        <div className="kpi">
+        <div className="kpi panel-2 hover-lift">
           <div className="text-xs" style={{ color: 'var(--muted-2)' }}>
             Narratives
           </div>
           <div className="mt-1 text-sm font-semibold">{run ? run.narratives.length : 0}</div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3 animate-fade-up" style={{ animationDelay: '70ms' }}>
+        <div className="panel p-6 hover-lift">
+          <h3 className="text-sm font-semibold">How it works</h3>
+          <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm" style={{ color: 'var(--muted)' }}>
+            <li>Collect on-chain, GitHub, and RSS signals</li>
+            <li>Compute fortnight deltas + transparent score</li>
+            <li>Generate narratives with evidence + build ideas</li>
+          </ol>
+        </div>
+        <div className="panel p-6 hover-lift">
+          <h3 className="text-sm font-semibold">Curated X / Discord / Blogs</h3>
+          <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
+            We keep a static, verifiable list (no scraping) so humans can triangulate narratives.
+          </p>
+          <p className="mt-2 text-xs" style={{ color: 'var(--muted-2)' }}>
+            Tip: judges can click through from <a className="underline hover:no-underline" href="/api/report">/api/report</a>.
+          </p>
+        </div>
+        <div className="panel p-6 hover-lift">
+          <h3 className="text-sm font-semibold">Quick links</h3>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {CURATED_X.slice(0, 5).map((l) => (
+              <a key={l.url} className="tag underline hover:no-underline" href={l.url} target="_blank" rel="noreferrer">
+                {l.label}
+              </a>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {CURATED_DISCORD.slice(0, 3).map((l) => (
+              <a key={l.url} className="tag underline hover:no-underline" href={l.url} target="_blank" rel="noreferrer">
+                {l.label}
+              </a>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {CURATED_BLOGS.slice(0, 3).map((l) => (
+              <a key={l.url} className="tag underline hover:no-underline" href={l.url} target="_blank" rel="noreferrer">
+                {l.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
 

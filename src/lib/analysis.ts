@@ -95,13 +95,18 @@ export async function generateRun(): Promise<RunPayload> {
     DEFAULT_REPOS.map((r) => fetchRepoIssueAndPrCounts({ fullName: r, fromIso: prevFrom, toIso: prevTo })),
   )
 
-  const openedIssuesCur = ghWindowCountsCur.reduce((a, b) => a + b.openedIssues, 0)
-  const openedIssuesPrev = ghWindowCountsPrev.reduce((a, b) => a + b.openedIssues, 0)
-  const mergedPrsCur = ghWindowCountsCur.reduce((a, b) => a + b.mergedPrs, 0)
-  const mergedPrsPrev = ghWindowCountsPrev.reduce((a, b) => a + b.mergedPrs, 0)
+  const sumOrNull = (xs: Array<number | null>): number | null => {
+    if (xs.some((x) => x === null)) return null
+    return xs.reduce<number>((a, b) => a + (b ?? 0), 0)
+  }
 
-  const issuesPct = pctChange(openedIssuesPrev, openedIssuesCur)
-  const prsPct = pctChange(mergedPrsPrev, mergedPrsCur)
+  const openedIssuesCur = sumOrNull(ghWindowCountsCur.map((x) => x.openedIssues))
+  const openedIssuesPrev = sumOrNull(ghWindowCountsPrev.map((x) => x.openedIssues))
+  const mergedPrsCur = sumOrNull(ghWindowCountsCur.map((x) => x.mergedPrs))
+  const mergedPrsPrev = sumOrNull(ghWindowCountsPrev.map((x) => x.mergedPrs))
+
+  const issuesPct = openedIssuesCur === null || openedIssuesPrev === null ? null : pctChange(openedIssuesPrev, openedIssuesCur)
+  const prsPct = mergedPrsCur === null || mergedPrsPrev === null ? null : pctChange(mergedPrsPrev, mergedPrsCur)
   const githubCommunityPct =
     issuesPct === null && prsPct === null
       ? 0
@@ -189,22 +194,22 @@ export async function generateRun(): Promise<RunPayload> {
         },
         {
           label: 'Opened issues across curated repos (current 14d vs previous 14d)',
-          value: openedIssuesCur,
-          delta: openedIssuesCur - openedIssuesPrev,
-          pctChange: issuesPct,
+          value: openedIssuesCur === null ? 'unavailable (rate limited)' : openedIssuesCur,
+          delta: openedIssuesCur === null || openedIssuesPrev === null ? undefined : openedIssuesCur - openedIssuesPrev,
+          pctChange: openedIssuesCur === null || openedIssuesPrev === null ? null : issuesPct,
           notes:
-            openedIssuesCur === 0 && openedIssuesPrev === 0
-              ? 'No data returned (likely rate limited) or genuinely zero for this window.'
+            openedIssuesCur === null
+              ? 'GitHub Search API returned no total_count (secondary rate limit). Try later or increase token quota.'
               : 'GitHub Search API (issues created in window). A community/dev demand proxy.',
         },
         {
           label: 'Merged PRs across curated repos (current 14d vs previous 14d)',
-          value: mergedPrsCur,
-          delta: mergedPrsCur - mergedPrsPrev,
-          pctChange: prsPct,
+          value: mergedPrsCur === null ? 'unavailable (rate limited)' : mergedPrsCur,
+          delta: mergedPrsCur === null || mergedPrsPrev === null ? undefined : mergedPrsCur - mergedPrsPrev,
+          pctChange: mergedPrsCur === null || mergedPrsPrev === null ? null : prsPct,
           notes:
-            mergedPrsCur === 0 && mergedPrsPrev === 0
-              ? 'No data returned (likely rate limited) or genuinely zero for this window.'
+            mergedPrsCur === null
+              ? 'GitHub Search API returned no total_count (secondary rate limit). Try later or increase token quota.'
               : 'GitHub Search API (PRs merged in window). A shipping-throughput proxy.',
         },
         ...repos.slice(0, 5).map((r) => ({
@@ -309,7 +314,7 @@ export async function generateRun(): Promise<RunPayload> {
         previous: { from: windows.previous.from.toISOString(), to: windows.previous.to.toISOString() },
       },
       solana: {
-        rpc: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+        rpc: (process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com').replace(/api-key=([^&]+)/i, 'api-key=REDACTED'),
         method: 'getSignaturesForAddress(BPFLoaderUpgradeable)',
         limit: 1000,
       },

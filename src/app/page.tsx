@@ -267,8 +267,8 @@ export default function Home() {
                           <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-2)' }}>
                             {typeof e.value === 'number' && <span className="tag">cur {e.value}</span>}
                             {typeof e.delta === 'number' && <span className="tag">Δ {e.delta}</span>}
-                            {e.pctChange === null && <span className="tag">new</span>}
-                            {typeof e.pctChange === 'number' && <span className="tag">{Math.round(e.pctChange * 10) / 10}%</span>}
+                            {e.pctChange === null && <span className="tag">pct new</span>}
+                            {typeof e.pctChange === 'number' && <span className="tag">pct {Math.round(e.pctChange * 10) / 10}%</span>}
                           </div>
                         </div>
                         {/* Mini delta bars (prev vs cur) */}
@@ -415,8 +415,8 @@ export default function Home() {
                       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-2)' }}>
                         {typeof e.value === 'number' && <span className="tag">cur {e.value}</span>}
                         {typeof e.delta === 'number' && <span className="tag">Δ {e.delta}</span>}
-                        {e.pctChange === null && <span className="tag">new</span>}
-                        {typeof e.pctChange === 'number' && <span className="tag">{Math.round(e.pctChange * 10) / 10}%</span>}
+                        {e.pctChange === null && <span className="tag">pct new</span>}
+                        {typeof e.pctChange === 'number' && <span className="tag">pct {Math.round(e.pctChange * 10) / 10}%</span>}
                       </div>
                     </div>
                     {(e.notes || e.value) && (

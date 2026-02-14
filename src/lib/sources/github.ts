@@ -99,17 +99,17 @@ export async function fetchRepoCommitCountSince(fullName: string, sinceIso: stri
   return count
 }
 
-async function ghSearchCount(q: string): Promise<number> {
+async function ghSearchCount(q: string): Promise<number | null> {
   try {
     const res = await fetchWithRetry(`https://api.github.com/search/issues?q=${encodeURIComponent(q)}&per_page=1`, {
       headers: { ...ghHeaders(), Accept: 'application/vnd.github+json' },
       next: { revalidate: 0 },
     })
-    if (!res.ok) return 0
+    if (!res.ok) return null
     const j = (await res.json()) as any
-    return typeof j.total_count === 'number' ? j.total_count : 0
+    return typeof j.total_count === 'number' ? j.total_count : null
   } catch {
-    return 0
+    return null
   }
 }
 
@@ -121,7 +121,7 @@ export async function fetchRepoIssueAndPrCounts(params: {
   fullName: string
   fromIso: string
   toIso: string
-}): Promise<{ openedIssues: number; mergedPrs: number }> {
+}): Promise<{ openedIssues: number | null; mergedPrs: number | null }> {
   const repo = `repo:${params.fullName}`
   // created window
   const created = `created:${params.fromIso}..${params.toIso}`

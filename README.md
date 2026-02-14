@@ -8,8 +8,9 @@ A lightweight, explainable tool that detects early Solana ecosystem signals and 
 Built for the Superteam Earn **Agents Only** bounty: "Develop a narrative detection and idea generation tool".
 
 ## Hosted Tool
-- Deploy on Vercel (recommended)
-- After deployment, add your hosted URL here.
+- Dashboard: https://solana-narrative-radar-6y4kpe9rw-khadira1937s-projects.vercel.app/
+- Judge artifact (styled): https://solana-narrative-radar-6y4kpe9rw-khadira1937s-projects.vercel.app/report
+- Judge artifact (raw markdown): https://solana-narrative-radar-6y4kpe9rw-khadira1937s-projects.vercel.app/api/report
 
 ## Data Sources Used
 This prototype prioritizes **signal quality, explainability, and reproducibility**.
@@ -20,8 +21,11 @@ This prototype prioritizes **signal quality, explainability, and reproducibility
   - `BPFLoaderUpgradeab1e11111111111111111111111`
 - Signals (fortnight-over-fortnight):
   - Upgradeable Loader tx count (deploy/upgrade activity proxy)
+  - **Top upgraded programs** (sampled; extracted from loader upgrade instructions, linked to Solscan)
+  - **Newly-seen upgraded programs** (sampled; launch proxy vs previous window)
   - Unique fee payer count (wallet participation proxy; computed from a small tx sample)
   - Failure rate in sample (stress/instability proxy)
+  - **Usage spike watchlist** (sampled signature counts for well-known programs; limit shown explicitly)
 
 ### 2) Developer + community activity (GitHub)
 - GitHub REST API:
@@ -73,8 +77,9 @@ The tool produces a ranked list of narratives and for each narrative:
 
 ### Where to see the full narrative list
 Because narratives are refreshed each run, the authoritative list is in:
-- UI: `/report`
-- Markdown export: `/api/report`
+- UI (dashboard): `/`
+- UI (styled report): `/report`
+- Markdown export (submission artifact): `/api/report`
 
 These endpoints include the complete list of detected narratives and their build ideas for the current run.
 
@@ -85,6 +90,11 @@ The tool clusters discourse signals into Solana-relevant narrative families such
 - MEV/validators/performance engineering
 - Developer tooling & infra
 - DeFi primitives (AMMs/perps/options)
+- Token Extensions (Token-2022)
+- State compression / cNFTs
+- Actions/Blinks distribution
+- Solana Mobile UX
+- LSTs / validator economics
 
 ## Reproduce / run locally
 
@@ -113,7 +123,13 @@ curl -X POST http://localhost:3000/api/run
 - `SOLANA_RPC_URL` (optional, recommended to use Helius RPC)
 - `HELIUS_API_KEY` (optional; if you use `https://rpc.helius.xyz/?api-key=...`)
 - `GITHUB_TOKEN` (optional but recommended)
-- `X_BEARER_TOKEN` (optional; enables official X API social velocity)
+- `X_BEARER_TOKEN` (optional; enables official X API social velocity; if credits are depleted the app degrades gracefully)
+- `SIGNALS_CACHE_MS` (optional; TTL cache for external calls, recommended 15–30 minutes in production)
+- `ONCHAIN_HYDRATE` (optional; set `1` to enable small tx hydration for top-program extraction)
+- `ONCHAIN_TX_SAMPLE` (optional; hydration sample size)
+- `ONCHAIN_UPGRADE_SAMPLE` (optional; number of upgrade txs to sample)
+- `PROGRAM_USAGE_WATCHLIST` (optional; `Label|Address,Label|Address`)
+- `PROGRAM_USAGE_LIMIT` (optional; signature sample cap per program)
 
 ## Future improvements (if extended)
 - True fortnight-over-fortnight deltas for on-chain metrics

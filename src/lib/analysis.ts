@@ -1,7 +1,7 @@
 import type { Narrative, RunPayload } from './types'
 import { clusterByTopics, narrativeFromCluster } from './narratives'
 import { makeWindows, pctChange } from './windows'
-import { fetchRepoCommitCountSince, fetchRepoMetrics } from './sources/github'
+import { fetchRepoCommitCountSince, fetchRepoIssueAndPrCounts, fetchRepoMetrics } from './sources/github'
 import { countRssInWindow, fetchRss } from './sources/rss'
 import { fetchOnchainSignals } from './sources/solana'
 import { fetchXSignals } from './sources/x'
@@ -79,13 +79,35 @@ export async function generateRun(): Promise<RunPayload> {
   const commitsPrev14d = Math.max(0, commits28d - commits14d)
   const commitsPct = pctChange(commitsPrev14d, commits14d)
 
+  // GitHub community/dev velocity: opened issues + merged PRs (Search API)
+  const curFrom = windows.current.from.toISOString()
+  const curTo = windows.current.to.toISOString()
+  const prevFrom = windows.previous.from.toISOString()
+  const prevTo = windows.previous.to.toISOString()
+
+  const ghWindowCountsCur = await Promise.all(
+    DEFAULT_REPOS.map((r) => fetchRepoIssueAndPrCounts({ fullName: r, fromIso: curFrom, toIso: curTo })),
+  )
+  const ghWindowCountsPrev = await Promise.all(
+    DEFAULT_REPOS.map((r) => fetchRepoIssueAndPrCounts({ fullName: r, fromIso: prevFrom, toIso: prevTo })),
+  )
+
+  const openedIssuesCur = ghWindowCountsCur.reduce((a, b) => a + b.openedIssues, 0)
+  const openedIssuesPrev = ghWindowCountsPrev.reduce((a, b) => a + b.openedIssues, 0)
+  const mergedPrsCur = ghWindowCountsCur.reduce((a, b) => a + b.mergedPrs, 0)
+  const mergedPrsPrev = ghWindowCountsPrev.reduce((a, b) => a + b.mergedPrs, 0)
+
+  const issuesPct = pctChange(openedIssuesPrev, openedIssuesCur)
+  const prsPct = pctChange(mergedPrsPrev, mergedPrsCur)
+  const githubCommunityPct = Math.round(((issuesPct + prsPct) / 2) * 10) / 10
+
   const baseNarratives: Narrative[] = [
     {
       id: 'onchain-program-velocity',
       title: 'On-chain shipping velocity is accelerating (deploy/upgrade + wallet participation)',
       score: scoreFromSignals({
         onchainPct: onchain.pctChangeUpgradeableLoader,
-        githubPct: commitsPct,
+        githubPct: (commitsPct + githubCommunityPct) / 2,
         rssPct: rssPct,
         socialPct: xSignals.pctChangeTweets,
         bonus: 2,
@@ -122,7 +144,7 @@ export async function generateRun(): Promise<RunPayload> {
     {
       id: 'dev-activity-fortnight',
       title: 'Developer activity is rising (commit momentum across core repos)',
-      score: scoreFromSignals({ githubPct: commitsPct, rssPct: rssPct, onchainPct: onchain.pctChangeUpgradeableLoader, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
+      score: scoreFromSignals({ githubPct: (commitsPct + githubCommunityPct) / 2, rssPct: rssPct, onchainPct: onchain.pctChangeUpgradeableLoader, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
       summary:
         'We track commit counts on a curated set of Solana core repos and compare the last fortnight against the prior fortnight. This helps surface early infra/tooling narratives.',
       evidence: [
@@ -132,6 +154,20 @@ export async function generateRun(): Promise<RunPayload> {
           delta: commits14d - commitsPrev14d,
           pctChange: commitsPct,
           notes: `Curated repos: ${DEFAULT_REPOS.join(', ')}`,
+        },
+        {
+          label: 'Opened issues across curated repos (current 14d vs previous 14d)',
+          value: openedIssuesCur,
+          delta: openedIssuesCur - openedIssuesPrev,
+          pctChange: issuesPct,
+          notes: 'GitHub Search API (issues created in window). A community/dev demand proxy.',
+        },
+        {
+          label: 'Merged PRs across curated repos (current 14d vs previous 14d)',
+          value: mergedPrsCur,
+          delta: mergedPrsCur - mergedPrsPrev,
+          pctChange: prsPct,
+          notes: 'GitHub Search API (PRs merged in window). A shipping-throughput proxy.',
         },
         ...repos.slice(0, 5).map((r) => ({
           label: `GitHub repo snapshot: ${r.fullName}`,
@@ -148,7 +184,7 @@ export async function generateRun(): Promise<RunPayload> {
     {
       id: 'discourse-signal',
       title: 'Ecosystem discourse is picking up (research/blog cadence)',
-      score: scoreFromSignals({ rssPct: rssPct, githubPct: commitsPct, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
+      score: scoreFromSignals({ rssPct: rssPct, githubPct: (commitsPct + githubCommunityPct) / 2, socialPct: xSignals.pctChangeTweets, bonus: 1 }),
       summary:
         'We treat research/blog cadence as a weak-but-useful leading signal: when publishing volume rises, it often precedes new build waves. We count RSS items per fortnight and show citations.',
       evidence: [

@@ -55,3 +55,35 @@ export async function fetchRepoCommitCountSince(fullName: string, sinceIso: stri
   }
   return count
 }
+
+async function ghSearchCount(q: string): Promise<number> {
+  const res = await fetch(`https://api.github.com/search/issues?q=${encodeURIComponent(q)}&per_page=1`, {
+    headers: { ...ghHeaders(), Accept: 'application/vnd.github+json' },
+    next: { revalidate: 0 },
+  })
+  if (!res.ok) return 0
+  const j = (await res.json()) as any
+  return typeof j.total_count === 'number' ? j.total_count : 0
+}
+
+/**
+ * Community/dev velocity proxy: opened issues + merged PRs in a time window.
+ * Uses GitHub Search API (fast, returns total_count).
+ */
+export async function fetchRepoIssueAndPrCounts(params: {
+  fullName: string
+  fromIso: string
+  toIso: string
+}): Promise<{ openedIssues: number; mergedPrs: number }> {
+  const repo = `repo:${params.fullName}`
+  // created window
+  const created = `created:${params.fromIso}..${params.toIso}`
+
+  const [openedIssues, mergedPrs] = await Promise.all([
+    ghSearchCount(`${repo} is:issue ${created}`),
+    // merged PRs: we use merged: window for PRs
+    ghSearchCount(`${repo} is:pr merged:${params.fromIso}..${params.toIso}`),
+  ])
+
+  return { openedIssues, mergedPrs }
+}

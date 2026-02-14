@@ -242,24 +242,30 @@ export default function ReportPage() {
       )}
 
       {!loading && !error && (
-        <div className="mt-6 grid gap-4 md:grid-cols-[300px_1fr]">
-          <aside className="panel-2 p-5 hover-lift" style={{ height: 'fit-content' }}>
-            <div className="text-sm font-semibold">Contents</div>
-            <div className="mt-3 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
-              {parsed.toc.slice(0, 30).map((t) => (
-                <a
-                  key={t.id}
-                  href={`#${t.id}`}
-                  className="block underline-offset-4 hover:underline"
-                  style={{ paddingLeft: t.level === 3 ? 12 : 0 }}
-                >
-                  {t.text}
-                </a>
-              ))}
+        <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-start">
+          <aside
+            className="panel-2 hover-lift md:sticky md:top-6"
+            style={{ height: 'fit-content', width: '100%', maxWidth: 320 }}
+          >
+            <div className="p-5">
+              <div className="text-sm font-semibold">Contents</div>
+              <div className="mt-3 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
+                {parsed.toc.slice(0, 36).map((t) => (
+                  <a
+                    key={t.id}
+                    href={`#${t.id}`}
+                    className="block hover:underline"
+                    style={{ paddingLeft: t.level === 3 ? 12 : 0, textUnderlineOffset: 4 }}
+                  >
+                    {t.text}
+                  </a>
+                ))}
+              </div>
             </div>
           </aside>
 
-          <article className="panel p-6 prose">
+          <article className="panel prose" style={{ width: '100%' }}>
+            <div className="p-6 md:p-7">
             {parsed.blocks.map((b, idx) => {
               if (b.kind === 'hr') return <hr key={idx} />
               if (b.kind === 'code')
@@ -294,6 +300,7 @@ export default function ReportPage() {
                 )
               return null
             })}
+            </div>
           </article>
         </div>
       )}

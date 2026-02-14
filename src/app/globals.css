@@ -197,6 +197,7 @@ body::after {
 .prose {
   color: rgba(234, 252, 250, 0.9);
   line-height: 1.65;
+  font-size: 0.95rem;
 }
 
 .prose h1 {

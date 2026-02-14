@@ -132,11 +132,20 @@ export async function generateRun(): Promise<RunPayload> {
           ? [
               {
                 label: 'Top upgraded programs (sampled from current window)',
-                value: onchain.topUpgradedProgramsCurrent
-                  .map((p) => `${p.programId} (x${p.upgrades})`)
+                notes: onchain.topUpgradedProgramsCurrent
+                  .map((p) => `${p.programId} (x${p.upgrades}) — https://solscan.io/account/${p.programId}`)
                   .join(' | '),
-                notes: 'Program IDs extracted from Upgradeable Loader instructions (small sample).',
               },
+              ...(onchain.newlySeenUpgradedPrograms.length
+                ? [
+                    {
+                      label: 'Newly-seen upgraded programs (launch proxy; sampled)',
+                      notes: onchain.newlySeenUpgradedPrograms
+                        .map((p) => `${p.programId} (x${p.upgrades}) — https://solscan.io/account/${p.programId}`)
+                        .join(' | '),
+                    },
+                  ]
+                : []),
             ]
           : []),
         {
@@ -283,7 +292,7 @@ export async function generateRun(): Promise<RunPayload> {
         score,
         rssCur: cur,
         rssPrev: prev,
-        rssPct: pct ?? 0,
+        rssPct: pct,
       })
     })
     .filter(Boolean) as Narrative[]

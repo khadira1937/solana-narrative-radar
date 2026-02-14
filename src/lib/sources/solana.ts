@@ -16,6 +16,7 @@ export type OnchainSignals = {
   failureRatePreviousPct: number
 
   topUpgradedProgramsCurrent: { programId: string; upgrades: number }[]
+  newlySeenUpgradedPrograms: { programId: string; upgrades: number }[]
 
   sampleSignatures: string[]
 }
@@ -117,6 +118,7 @@ export async function fetchOnchainSignals(params: {
   // Top upgraded programs (judge-wow): parse a tiny tx sample and extract the program account
   // from the Upgradeable Loader instruction account list.
   let topUpgradedProgramsCurrent: { programId: string; upgrades: number }[] = []
+  let newlySeenUpgradedPrograms: { programId: string; upgrades: number }[] = []
   if (process.env.ONCHAIN_HYDRATE !== '0') {
     const UPGRADE_SAMPLE = Number(process.env.ONCHAIN_UPGRADE_SAMPLE || 20)
     const sample = cur.slice(0, UPGRADE_SAMPLE)
@@ -144,6 +146,26 @@ export async function fetchOnchainSignals(params: {
       .map(([programId, upgrades]) => ({ programId, upgrades }))
       .sort((a, b) => b.upgrades - a.upgrades)
       .slice(0, 8)
+
+    // Compare against a small previous-window sample for “newly seen” upgrades (launch proxy).
+    const prevSample = prev.slice(0, UPGRADE_SAMPLE)
+    const prevTxs = await Promise.all(prevSample.map((s) => conn.getTransaction(s.signature, { maxSupportedTransactionVersion: 0 }).catch(() => null)))
+    const prevSet = new Set<string>()
+    for (const tx of prevTxs) {
+      if (!tx) continue
+      const msg: any = tx.transaction.message as any
+      const keys: any[] = msg.accountKeys || msg.staticAccountKeys || msg.getAccountKeys?.().staticAccountKeys || []
+      const instructions: any[] = msg.instructions || []
+      for (const ix of instructions) {
+        const programId = keys[ix.programIdIndex]?.toBase58?.()
+        if (programId !== BPF_UPGRADEABLE_LOADER.toBase58()) continue
+        const accIdxs: number[] = ix.accounts || []
+        const programAcc = accIdxs.length >= 2 ? keys[accIdxs[1]]?.toBase58?.() : null
+        if (programAcc) prevSet.add(programAcc)
+      }
+    }
+
+    newlySeenUpgradedPrograms = topUpgradedProgramsCurrent.filter((p) => !prevSet.has(p.programId)).slice(0, 6)
   }
 
   return {
@@ -159,6 +181,7 @@ export async function fetchOnchainSignals(params: {
     failureRatePreviousPct: prevHyd.failureRatePct,
 
     topUpgradedProgramsCurrent,
+    newlySeenUpgradedPrograms,
 
     sampleSignatures: sigs.slice(0, 10).map((s) => s.signature),
   }

@@ -245,27 +245,45 @@ export default function ReportPage() {
         <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-start">
           <aside
             className="panel-2 hover-lift md:sticky md:top-6"
-            style={{ height: 'fit-content', width: '100%', maxWidth: 320 }}
+            style={{ height: 'fit-content', width: '100%', maxWidth: 360 }}
           >
             <div className="p-5">
-              <div className="text-sm font-semibold">Contents</div>
-              <div className="mt-3 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
-                {parsed.toc.slice(0, 36).map((t) => (
-                  <a
-                    key={t.id}
-                    href={`#${t.id}`}
-                    className="block hover:underline"
-                    style={{ paddingLeft: t.level === 3 ? 12 : 0, textUnderlineOffset: 4 }}
-                  >
-                    {t.text}
-                  </a>
-                ))}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="section-title">Navigation</div>
+                  <div className="mt-1 text-sm font-semibold">Contents</div>
+                </div>
+                <a
+                  className="text-xs underline hover:no-underline"
+                  style={{ color: 'var(--muted-2)' }}
+                  href="#top"
+                >
+                  Top
+                </a>
+              </div>
+
+              <div
+                className="mt-4 pr-1"
+                style={{ color: 'var(--muted)', maxHeight: 'calc(85vh - 140px)', overflow: 'auto' }}
+              >
+                <div className="space-y-1 text-sm">
+                  {parsed.toc.slice(0, 40).map((t) => (
+                    <a
+                      key={t.id}
+                      href={`#${t.id}`}
+                      className="block rounded-md px-2 py-1 hover:underline"
+                      style={{ paddingLeft: t.level === 3 ? 18 : 10, textUnderlineOffset: 4 }}
+                    >
+                      {t.text}
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
           </aside>
 
           <article className="panel prose" style={{ width: '100%' }}>
-            <div className="p-6 md:p-7">
+            <div id="top" className="p-6 md:p-7">
             {parsed.blocks.map((b, idx) => {
               if (b.kind === 'hr') return <hr key={idx} />
               if (b.kind === 'code')

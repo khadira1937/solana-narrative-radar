@@ -132,10 +132,10 @@ export async function generateRun(): Promise<RunPayload> {
           ? [
               {
                 label: 'Top upgraded programs (sampled from current window)',
-                value: onchain.topUpgradedProgramsCurrent.length,
-                notes: onchain.topUpgradedProgramsCurrent
+                value: onchain.topUpgradedProgramsCurrent
                   .map((p) => `${p.programId} (x${p.upgrades})`)
                   .join(' | '),
+                notes: 'Program IDs extracted from Upgradeable Loader instructions (small sample).',
               },
             ]
           : []),

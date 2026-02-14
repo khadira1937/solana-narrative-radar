@@ -25,7 +25,8 @@ export async function GET() {
       const details: string[] = []
       if (typeof e.value === 'number') details.push(`value=${e.value}`)
       if (typeof e.delta === 'number') details.push(`delta=${e.delta}`)
-      if (typeof e.pctChange === 'number') details.push(`pct=${e.pctChange}%`)
+      if (e.pctChange === null) details.push('pct=new')
+      if (typeof e.pctChange === 'number') details.push(`pct=${Math.round(e.pctChange * 10) / 10}%`)
       if (details.length) parts.push(`(${details.join(', ')})`)
       if (e.sourceUrl) parts.push(`— ${e.sourceUrl}`)
       if (e.notes) parts.push(`— ${e.notes}`)

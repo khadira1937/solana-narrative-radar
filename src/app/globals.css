@@ -23,8 +23,10 @@ body {
 }
 
 body {
-  background: radial-gradient(1200px 600px at 20% 0%, rgba(97, 61, 255, 0.25), transparent 55%),
+  background:
+    radial-gradient(1200px 600px at 20% 0%, rgba(97, 61, 255, 0.25), transparent 55%),
     radial-gradient(900px 500px at 90% 10%, rgba(55, 197, 179, 0.18), transparent 50%),
+    radial-gradient(700px 420px at 50% 85%, rgba(55, 197, 179, 0.08), transparent 60%),
     var(--bg);
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
@@ -50,16 +52,23 @@ body {
 }
 
 .btn-primary {
-  border-radius: 0.75rem;
-  padding: 0.5rem 1rem;
+  border-radius: 0.85rem;
+  padding: 0.6rem 1.05rem;
   font-size: 0.875rem;
-  font-weight: 700;
-  transition: filter 150ms ease;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  transition: transform 150ms ease, filter 150ms ease;
   background: linear-gradient(135deg, rgba(55, 197, 179, 0.95), rgba(97, 61, 255, 0.9));
+  box-shadow: 0 10px 30px rgba(97, 61, 255, 0.18);
 }
 
 .btn-primary:hover {
   filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-ghost {

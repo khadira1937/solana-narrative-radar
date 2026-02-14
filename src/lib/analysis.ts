@@ -24,8 +24,12 @@ const DEFAULT_FEEDS = [
   { name: 'Jito Blog', url: 'https://www.jito.network/blog/rss.xml' },
   // These may occasionally break; fetchRss() safely ignores broken feeds.
   { name: 'Metaplex (news)', url: 'https://www.metaplex.com/rss.xml' },
+  // If station RSS breaks, it will be ignored safely.
   { name: 'Jupiter (station)', url: 'https://station.jup.ag/rss.xml' },
+  { name: 'Messari (Solana tag)', url: 'https://messari.io/rss?tags=solana' },
+  // Some outlets don’t offer stable RSS; we keep them as curated links in /api/report.
 ]
+
 
 // This is intentionally simple + transparent.
 // In 48h, explainability > fancy ML.

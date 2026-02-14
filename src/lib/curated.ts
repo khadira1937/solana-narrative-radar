@@ -18,11 +18,18 @@ export const CURATED_X: CuratedLink[] = [
   { label: 'heliuslabs', url: 'https://x.com/heliuslabs', notes: 'Infra/indexing provider; frequent technical updates.' },
   { label: 'jito_sol', url: 'https://x.com/jito_sol', notes: 'MEV + validator infra; important performance narrative.' },
   { label: 'jupiterexchange', url: 'https://x.com/jupiterexchange', notes: 'DEX aggregator; strong distribution + product narrative.' },
+
+  // Product + research KOLs (as referenced in the bounty prompt)
+  { label: '0xakshayy', url: 'https://x.com/0xakshayy', notes: 'Akshay: product/operator; good for early product narratives.' },
+
+  // DeFi / consumer anchors (useful for triangulation)
   { label: 'driftprotocol', url: 'https://x.com/driftprotocol', notes: 'Perps + DeFi primitives on Solana.' },
   { label: 'orca_so', url: 'https://x.com/orca_so', notes: 'AMM; DeFi liquidity signals.' },
   { label: 'kamino_finance', url: 'https://x.com/kamino_finance', notes: 'Lending/Leverage; DeFi risk narratives.' },
   { label: 'marinadefinance', url: 'https://x.com/marinadefinance', notes: 'Liquid staking; stake/validator narratives.' },
   { label: 'metaplex', url: 'https://x.com/metaplex', notes: 'NFT/standards; token metadata narratives.' },
+
+  // Core engineering
   { label: 'solanalabs', url: 'https://x.com/solanalabs', notes: 'Core engineering updates.' },
 ]
 
@@ -41,6 +48,11 @@ export const CURATED_BLOGS: CuratedLink[] = [
   { label: 'Helius Blog', url: 'https://www.helius.dev/blog', notes: 'High-signal technical posts; often includes code.' },
   { label: 'Jito Blog', url: 'https://www.jito.network/blog', notes: 'MEV / validator infra deep-dives.' },
   { label: 'Solana Compass', url: 'https://solanacompass.com/', notes: 'Community research + explainers.' },
+
+  // Market / research outlets mentioned by the bounty prompt
+  { label: 'Messari Research', url: 'https://messari.io/research', notes: 'Market reports and ecosystem narratives.' },
+  { label: 'Electric Capital (reports)', url: 'https://www.electriccapital.com/reports', notes: 'Developer report; macro narrative context.' },
+
   { label: 'Jupiter Docs', url: 'https://station.jup.ag/docs', notes: 'Product + integration narrative.' },
   { label: 'Metaplex Docs', url: 'https://developers.metaplex.com/', notes: 'Standards/integration signals.' },
 ]

@@ -45,10 +45,23 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => {
-    // auto-run once for a nice hosted demo
-    runAnalysis().catch(() => {})
+  const loadLatest = useCallback(async () => {
+    setError(null)
+    try {
+      const res = await fetch('/api/latest')
+      const json = (await res.json()) as RunResponse & { cached?: boolean }
+      if (!json.ok || !json.run) throw new Error(json.error || 'Failed to load latest run')
+      setRun(json.run)
+    } catch (e) {
+      // If latest fails, fall back to generating once (still judge-friendly)
+      await runAnalysis()
+    }
   }, [runAnalysis])
+
+  useEffect(() => {
+    // Show something fast if available; otherwise generate once.
+    loadLatest().catch(() => {})
+  }, [loadLatest])
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -69,7 +82,7 @@ export default function Home() {
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60">
+              <button onClick={runAnalysis} disabled={loading} className="btn-primary disabled:opacity-60" aria-label="Run analysis">
                 {loading ? 'Running…' : 'Run analysis'}
               </button>
               <a className="btn-ghost" href="/api/report" target="_blank" rel="noreferrer">
@@ -192,7 +205,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4">
+      <div className="mt-8 grid gap-4 animate-fade-up" style={{ animationDelay: '110ms' }}>
         {sortedNarratives.length === 0 ? (
           <div className="mt-6 panel p-6 text-sm" style={{ color: 'var(--muted)' }}>
             Click <span className="font-semibold">Run analysis</span> to generate the fortnightly report.

@@ -40,6 +40,7 @@ export async function GET() {
   lines.push('---')
   lines.push('### Curated social + community sources (verifiable, non-scraped)')
   lines.push('These are **not** scraped automatically. They are included so judges can quickly verify/triangulate narratives when reviewing the report.')
+  lines.push('Approach: we prioritize **signal quality + explainability**. Social sources are curated and explicitly cited instead of scraped, to keep the submission reproducible and compliant.')
   lines.push('')
 
   lines.push('**X (Twitter) — high-signal accounts**')

@@ -35,7 +35,8 @@ export default function Home() {
     setError(null)
     try {
       const res = await fetch('/api/run', { method: 'POST' })
-      const json = (await res.json()) as RunResponse
+      const text = await res.text()
+      const json = (text ? (JSON.parse(text) as RunResponse) : ({ ok: false, error: 'Empty response from server' } as RunResponse))
       if (!json.ok || !json.run) throw new Error(json.error || 'Failed to generate run')
       setRun(json.run)
     } catch (e) {
@@ -49,7 +50,8 @@ export default function Home() {
     setError(null)
     try {
       const res = await fetch('/api/latest')
-      const json = (await res.json()) as RunResponse & { cached?: boolean }
+      const text = await res.text()
+      const json = (text ? (JSON.parse(text) as RunResponse & { cached?: boolean }) : ({ ok: false, error: 'Empty response from server' } as any))
       if (!json.ok || !json.run) throw new Error(json.error || 'Failed to load latest run')
       setRun(json.run)
     } catch (e) {

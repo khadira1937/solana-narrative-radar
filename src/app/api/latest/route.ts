@@ -5,11 +5,16 @@ import { getCachedRun, setCachedRun } from '@/lib/cache'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const cached = getCachedRun()
-  if (cached) return NextResponse.json({ ok: true, run: cached, cached: true })
+  try {
+    const cached = getCachedRun()
+    if (cached) return NextResponse.json({ ok: true, run: cached, cached: true })
 
-  // If nothing cached yet (cold start), generate once.
-  const run = await generateRun()
-  setCachedRun(run)
-  return NextResponse.json({ ok: true, run, cached: false })
+    // If nothing cached yet (cold start), generate once.
+    const run = await generateRun()
+    setCachedRun(run)
+    return NextResponse.json({ ok: true, run, cached: false })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error'
+    return NextResponse.json({ ok: false, error: msg }, { status: 200 })
+  }
 }

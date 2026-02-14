@@ -8,7 +8,12 @@ function fmtPct(p: number | null | undefined) {
 
 function whyNow(evidence: NarrativeEvidence[]) {
   const ranked = evidence
-    .filter((e) => typeof e.delta === 'number' || e.pctChange === null || typeof e.pctChange === 'number')
+    .filter((e) => {
+      // Exclude unavailable metrics from “Why now” so it reads clean to judges.
+      const unavailable = typeof e.value === 'string' && e.value.toLowerCase().includes('unavailable')
+      if (unavailable) return false
+      return typeof e.delta === 'number' || e.pctChange === null || typeof e.pctChange === 'number'
+    })
     .map((e) => ({
       e,
       weight: Math.abs(typeof e.delta === 'number' ? e.delta : 0) + (e.pctChange === null ? 50 : Math.abs(typeof e.pctChange === 'number' ? e.pctChange : 0)),

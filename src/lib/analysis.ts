@@ -140,7 +140,7 @@ export async function generateRun(): Promise<RunPayload> {
         ...(usage.length
           ? [
               {
-                label: 'Program usage watchlist (tx signatures sampled; cur vs prev)',
+                label: `Program usage watchlist (sampled signatures; limit=${Number(process.env.PROGRAM_USAGE_LIMIT || 400)})`,
                 notes: usage
                   .slice(0, 5)
                   .map((u) => `${u.label}: cur=${u.cur}, prev=${u.prev}, Δ=${u.delta}${u.pct === null ? ', pct=new' : `, pct=${Math.round(u.pct * 10) / 10}%`} — https://solscan.io/account/${u.address}`)

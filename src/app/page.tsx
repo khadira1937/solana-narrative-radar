@@ -390,7 +390,11 @@ export default function Home() {
               <div className="text-sm font-semibold">Why now</div>
               <div className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
                 {(active.evidence || [])
-                  .filter((e) => typeof e.delta === 'number' || e.pctChange === null || typeof e.pctChange === 'number')
+                  .filter((e) => {
+                    const unavailable = typeof e.value === 'string' && e.value.toLowerCase().includes('unavailable')
+                    if (unavailable) return false
+                    return typeof e.delta === 'number' || e.pctChange === null || typeof e.pctChange === 'number'
+                  })
                   .slice(0, 3)
                   .map((e) => {
                     const bits: string[] = [e.label]

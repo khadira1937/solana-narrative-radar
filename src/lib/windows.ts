@@ -18,7 +18,9 @@ export function inWindow(tsMs: number, w: TimeWindow) {
   return tsMs >= w.from.getTime() && tsMs < w.to.getTime()
 }
 
-export function pctChange(prev: number, cur: number) {
-  if (prev === 0) return cur === 0 ? 0 : 999
+export function pctChange(prev: number, cur: number): number | null {
+  // Judge-friendly: when prev=0 and cur>0, “infinite growth” is not a useful %.
+  // Return null and let the UI/report show a clear note instead of 999%.
+  if (prev === 0) return cur === 0 ? 0 : null
   return ((cur - prev) / prev) * 100
 }

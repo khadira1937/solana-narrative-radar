@@ -1,16 +1,18 @@
 export type XUser = { username: string; id: string; name?: string }
 
 export type XSignals = {
+  ok: boolean
+  error?: string
   tweetsCurrent: number
   tweetsPrevious: number
-  pctChangeTweets: number
+  pctChangeTweets: number | null
   perUserCurrent: { username: string; count: number }[]
 }
 
-const API = 'https://api.x.com/2'
+const API = process.env.X_API_BASE || 'https://api.twitter.com/2'
 
-function pctChange(prev: number, cur: number) {
-  if (prev === 0) return cur === 0 ? 0 : 999
+function pctChange(prev: number, cur: number): number | null {
+  if (prev === 0) return cur === 0 ? 0 : null
   return ((cur - prev) / prev) * 100
 }
 
@@ -35,16 +37,26 @@ export async function fetchXSignals(params: {
 }): Promise<XSignals> {
   const bearerEnv = process.env.X_BEARER_TOKEN
   if (!bearerEnv) {
-    return { tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
+    return { ok: false, error: 'X_BEARER_TOKEN missing', tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
   }
   const bearer: string = bearerEnv
 
   const uniq = Array.from(new Set(params.usernames.map((u) => u.replace('@', '').toLowerCase()))).slice(0, 20)
-  if (uniq.length === 0) return { tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
+  if (uniq.length === 0) return { ok: false, error: 'No usernames provided', tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
 
-  // Resolve ids once
-  const by = await xFetch(`/users/by?usernames=${encodeURIComponent(uniq.join(','))}`, bearer)
-  const users: XUser[] = (by.data || []).map((u: any) => ({ id: u.id, username: u.username, name: u.name }))
+  let users: XUser[] = []
+  try {
+    // Resolve ids once
+    const by = await xFetch(`/users/by?usernames=${encodeURIComponent(uniq.join(','))}`, bearer)
+    users = (by.data || []).map((u: any) => ({ id: u.id, username: u.username, name: u.name }))
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'X lookup failed'
+    return { ok: false, error: msg, tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
+  }
+
+  if (users.length === 0) {
+    return { ok: false, error: 'X returned 0 users for the curated list', tweetsCurrent: 0, tweetsPrevious: 0, pctChangeTweets: 0, perUserCurrent: [] }
+  }
 
   const startCur = params.current.from.toISOString()
   const endCur = params.current.to.toISOString()
@@ -74,10 +86,12 @@ export async function fetchXSignals(params: {
     .sort((a, b) => b.count - a.count)
     .slice(0, 10)
 
+  const pct = pctChange(tweetsPrevious, tweetsCurrent)
   return {
+    ok: true,
     tweetsCurrent,
     tweetsPrevious,
-    pctChangeTweets: Math.round(pctChange(tweetsPrevious, tweetsCurrent) * 10) / 10,
+    pctChangeTweets: pct === null ? null : Math.round(pct * 10) / 10,
     perUserCurrent,
   }
 }

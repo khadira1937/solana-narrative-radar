@@ -2,7 +2,7 @@ export type NarrativeEvidence = {
   label: string
   value?: number | string
   delta?: number
-  pctChange?: number
+  pctChange?: number | null
   sourceUrl?: string
   notes?: string
 }

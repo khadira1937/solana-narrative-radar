@@ -219,7 +219,16 @@ export default function Home() {
           </div>
         ) : (
           sortedNarratives.map((n) => (
-            <div key={n.id} className="mt-6 panel p-6 hover-lift" role="button" tabIndex={0} onClick={() => setActive(n)} onKeyDown={(e) => { if (e.key === 'Enter') setActive(n) }}>
+            <div
+              key={n.id}
+              className="mt-6 panel p-6 hover-lift card-clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setActive(n)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') setActive(n)
+              }}
+            >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <h2 className="text-lg font-semibold">{n.title}</h2>
@@ -227,9 +236,17 @@ export default function Home() {
                     {n.summary}
                   </p>
                 </div>
-                <div className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)' }}>
-                  Score {n.score}
-                </div>
+                {(() => {
+                  const s = n.score || 0
+                  const tier = s >= 23 ? 'score-good' : s >= 18 ? 'score-mid' : 'score-low'
+                  const dot = s >= 23 ? 'rgba(55,197,179,0.95)' : s >= 18 ? 'rgba(97,61,255,0.95)' : 'rgba(234,252,250,0.65)'
+                  return (
+                    <div className={`shrink-0 score-pill ${tier}`}>
+                      <span className="score-dot" style={{ background: dot }} />
+                      <span className="text-sm font-semibold">Score {Math.round(s * 10) / 10}</span>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">

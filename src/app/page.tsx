@@ -25,6 +25,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [run, setRun] = useState<RunView | null>(null)
+  const [active, setActive] = useState<NarrativeView | null>(null)
 
   const sortedNarratives = useMemo(() => {
     return (run?.narratives || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0))
@@ -235,7 +236,7 @@ export default function Home() {
           </div>
         ) : (
           sortedNarratives.map((n) => (
-            <div key={n.id} className="mt-6 panel p-6">
+            <div key={n.id} className="mt-6 panel p-6 hover-lift" role="button" tabIndex={0} onClick={() => setActive(n)} onKeyDown={(e) => { if (e.key === 'Enter') setActive(n) }}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <h2 className="text-lg font-semibold">{n.title}</h2>
@@ -270,8 +271,37 @@ export default function Home() {
                             {typeof e.pctChange === 'number' && <span className="tag">{Math.round(e.pctChange * 10) / 10}%</span>}
                           </div>
                         </div>
+                        {/* Mini delta bars (prev vs cur) */}
+                        {typeof e.value === 'number' && typeof e.delta === 'number' && (
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-[10px]" style={{ color: 'var(--muted-2)' }}>
+                              <span>prev {Math.max(0, e.value - e.delta)}</span>
+                              <span>cur {e.value}</span>
+                            </div>
+                            <div className="mt-1 flex gap-2">
+                              {(() => {
+                                const prev = Math.max(0, e.value - e.delta)
+                                const cur = e.value
+                                const max = Math.max(1, prev, cur)
+                                const prevW = Math.round((prev / max) * 100)
+                                const curW = Math.round((cur / max) * 100)
+                                return (
+                                  <>
+                                    <div className="h-2 flex-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                      <div className="h-2 rounded-full" style={{ width: `${prevW}%`, background: 'rgba(234,252,250,0.22)' }} />
+                                    </div>
+                                    <div className="h-2 flex-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                      <div className="h-2 rounded-full" style={{ width: `${curW}%`, background: 'linear-gradient(135deg, rgba(55,197,179,0.85), rgba(97,61,255,0.75))' }} />
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
                         {(e.notes || e.value) && (
-                          <div className="mt-1 text-xs break-words" style={{ color: 'var(--muted-2)' }}>
+                          <div className="mt-2 text-xs break-words" style={{ color: 'var(--muted-2)' }}>
                             {e.notes || e.value}
                           </div>
                         )}
@@ -316,6 +346,106 @@ export default function Home() {
       <footer className="mt-10 text-xs" style={{ color: 'var(--muted-2)' }}>
         Built for the Superteam Earn agent bounty. Prioritizes explainability + reproducibility over volume.
       </footer>
+
+      {/* Narrative detail drawer/modal */}
+      {active && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center p-4 md:items-center"
+          style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setActive(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="panel w-full max-w-4xl p-6"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxHeight: '85vh', overflow: 'auto' }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs" style={{ color: 'var(--muted-2)' }}>
+                  Narrative detail
+                </div>
+                <h2 className="mt-1 text-xl font-semibold">{active.title}</h2>
+                <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
+                  {active.summary}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="text-xs" style={{ color: 'var(--muted-2)' }}>
+                  Score
+                </div>
+                <div className="mt-1 inline-flex rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)' }}>
+                  {active.score}
+                </div>
+                <button className="btn-ghost mt-3 w-full" onClick={() => setActive(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {/* Why now */}
+            <div className="mt-5 panel-2 p-4">
+              <div className="text-sm font-semibold">Why now</div>
+              <div className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
+                {(active.evidence || [])
+                  .filter((e) => typeof e.delta === 'number' || e.pctChange === null || typeof e.pctChange === 'number')
+                  .slice(0, 3)
+                  .map((e) => {
+                    const bits: string[] = [e.label]
+                    if (typeof e.delta === 'number') bits.push(`Δ ${e.delta}`)
+                    if (e.pctChange === null) bits.push('new')
+                    if (typeof e.pctChange === 'number') bits.push(`${Math.round(e.pctChange * 10) / 10}%`)
+                    return bits.join(' · ')
+                  })
+                  .join(' | ') || 'Signals in this window increased vs the previous fortnight.'}
+              </div>
+            </div>
+
+            {/* Full evidence */}
+            <div className="mt-5">
+              <div className="text-sm font-semibold">Evidence (full)</div>
+              <ul className="mt-3 space-y-3 text-sm" style={{ color: 'var(--muted)' }}>
+                {(active.evidence || []).map((e, idx) => (
+                  <li key={idx} className="rounded-lg p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="font-semibold" style={{ color: 'rgba(234,252,250,0.92)' }}>
+                        {e.label}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-2)' }}>
+                        {typeof e.value === 'number' && <span className="tag">cur {e.value}</span>}
+                        {typeof e.delta === 'number' && <span className="tag">Δ {e.delta}</span>}
+                        {e.pctChange === null && <span className="tag">new</span>}
+                        {typeof e.pctChange === 'number' && <span className="tag">{Math.round(e.pctChange * 10) / 10}%</span>}
+                      </div>
+                    </div>
+                    {(e.notes || e.value) && (
+                      <div className="mt-2 text-xs break-words" style={{ color: 'var(--muted-2)' }}>
+                        {e.notes || e.value}
+                      </div>
+                    )}
+                    {e.sourceUrl && (
+                      <a href={e.sourceUrl} className="mt-2 inline-block text-xs underline hover:no-underline" target="_blank" rel="noreferrer">
+                        Source
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Build ideas */}
+            <div className="mt-5">
+              <div className="text-sm font-semibold">Build ideas (3–5)</div>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm" style={{ color: 'var(--muted)' }}>
+                {(active.ideas || []).map((idea, idx) => (
+                  <li key={idx}>{idea}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

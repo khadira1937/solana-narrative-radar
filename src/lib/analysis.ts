@@ -168,9 +168,9 @@ export async function generateRun(): Promise<RunPayload> {
         },
       ],
       ideas: [
-        'A “Program Launch Radar” that highlights newly-upgraded programs + first-user growth hints.\nMVP: top upgraded programs + links + deployment timeline.\nMetric: users clicking through / tracking a program.',
-        'A release-cadence tracker for protocol teams (upgrade frequency, deploy anomalies, changelog reminders).\nMVP: weekly/fortnight digest + anomaly alerts.\nMetric: subscribed teams + alert click-through.',
-        'A “Program health page” generator (explainers + usage + risk flags) for any program id.\nMVP: auto-page with citations + recent activity.\nMetric: generated pages shared externally.',
+        'Target: protocol teams + analysts. MVP (1w): Program Launch Radar (top upgraded + newly-seen program IDs + Solscan links). Why now: loader activity is new/rising. Metric: report exports + clicks to explorers.',
+        'Target: infra leads. MVP (1w): release-cadence tracker (upgrade frequency + anomaly alerts + changelog reminders). Why now: shipping velocity accelerating. Metric: alert CTR + subscriptions.',
+        'Target: builders/users. MVP (1w): Program health page generator (activity + risks + citations) for any program ID. Why now: more programs upgrading. Metric: pages generated + shared.',
       ],
     },
     {

@@ -235,6 +235,10 @@ export default function Home() {
                   <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
                     {n.summary}
                   </p>
+                  <div className="mt-3 text-xs" style={{ color: 'var(--muted-2)' }}>
+                    <span className="font-semibold">Why now:</span>{' '}
+                    <span>{whyNow(n)}</span>
+                  </div>
                 </div>
                 {(() => {
                   const s = n.score || 0

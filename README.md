@@ -12,28 +12,43 @@ Built for the Superteam Earn **Agents Only** bounty: "Develop a narrative detect
 - After deployment, add your hosted URL here.
 
 ## Data Sources Used
-This prototype intentionally uses **stable, public** sources so results are reproducible:
+This prototype prioritizes **signal quality, explainability, and reproducibility**.
 
-### 1) On-chain (Solana RPC)
-- Solana mainnet RPC (`SOLANA_RPC_URL`, defaults to `https://api.mainnet-beta.solana.com`)
-- Method: `getSignaturesForAddress` for the **BPF Upgradeable Loader** program
+### 1) On-chain (Solana RPC; optional Helius RPC)
+- RPC URL: `SOLANA_RPC_URL` (defaults to Solana mainnet)
+- Base method: `getSignaturesForAddress` for the **BPF Upgradeable Loader** program
   - `BPFLoaderUpgradeab1e11111111111111111111111`
-- Why: upgrade/deploy activity is a lightweight proxy for shipping velocity, launches, and iteration cycles.
+- Signals (fortnight-over-fortnight):
+  - Upgradeable Loader tx count (deploy/upgrade activity proxy)
+  - Unique fee payer count (wallet participation proxy; computed from a small tx sample)
+  - Failure rate in sample (stress/instability proxy)
 
-### 2) Developer activity (GitHub)
-- GitHub REST API
-- Curated repo list (kept small to avoid rate-limit issues)
-- Metrics fetched per repo:
-  - stars, forks, open issues, last pushed time
+### 2) Developer + community activity (GitHub)
+- GitHub REST API:
+  - Repo snapshots (stars, forks, open issues, pushedAt)
+  - Commit counts per repo (lightweight pagination)
+- GitHub Search API (community velocity):
+  - Opened issues in window (demand proxy)
+  - Merged PRs in window (shipping throughput proxy)
 
 Optional:
-- `GITHUB_TOKEN` can be set to increase rate limits.
+- `GITHUB_TOKEN` recommended to avoid rate limits.
 
-### 3) Ecosystem discourse (RSS)
-- A curated RSS feed list (e.g., Solana blog, Helius blog)
-- Items are collected and used as evidence/citations
+### 3) Social signals (X / Twitter) — **official API only**
+- Uses the X API v2 with `X_BEARER_TOKEN` (no scraping)
+- Signals:
+  - Tweet velocity across a curated KOL list (current fortnight vs previous)
+  - Top posters (for evidence)
 
-> Note: The bounty mentions social signals (X/Discord/etc.). This prototype prioritizes **reproducibility** and avoids fragile scraping. In the next iteration, add social sources via official APIs (or curated, cited links) to keep it compliant and verifiable.
+If `X_BEARER_TOKEN` is missing, X signals are disabled (the report still includes curated verification links).
+
+### 4) Ecosystem discourse (RSS)
+- Curated RSS feeds (Solana/Helius/Jito/Messari/etc.)
+- Used for topic clustering + citations in the evidence panel
+
+### Discord
+- Discord ingestion is supported as a future plug-in, but requires bot access to specific servers/channels.
+- This submission avoids Discord scraping and remains compliant by using official APIs + public sources.
 
 ## How signals are detected and ranked
 This is a transparent scoring approach (no black box):
@@ -95,8 +110,10 @@ curl -X POST http://localhost:3000/api/run
 ```
 
 ### Environment variables
-- `SOLANA_RPC_URL` (optional)
-- `GITHUB_TOKEN` (optional)
+- `SOLANA_RPC_URL` (optional, recommended to use Helius RPC)
+- `HELIUS_API_KEY` (optional; if you use `https://rpc.helius.xyz/?api-key=...`)
+- `GITHUB_TOKEN` (optional but recommended)
+- `X_BEARER_TOKEN` (optional; enables official X API social velocity)
 
 ## Future improvements (if extended)
 - True fortnight-over-fortnight deltas for on-chain metrics

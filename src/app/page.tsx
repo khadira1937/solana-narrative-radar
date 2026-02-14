@@ -30,6 +30,27 @@ export default function Home() {
     return (run?.narratives || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0))
   }, [run])
 
+  const whyNow = useCallback((n: NarrativeView) => {
+    const ev = (n.evidence || []).filter((e) => typeof e.delta === 'number' || typeof e.pctChange === 'number' || e.pctChange === null)
+    const scored = ev
+      .map((e) => {
+        const pct = typeof e.pctChange === 'number' ? Math.abs(e.pctChange) : e.pctChange === null ? 50 : 0
+        const d = typeof e.delta === 'number' ? Math.abs(e.delta) : 0
+        return { e, score: pct + Math.min(50, d) }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map(({ e }) => {
+        const bits: string[] = [e.label]
+        if (typeof e.delta === 'number') bits.push(`Δ ${e.delta}`)
+        if (e.pctChange === null) bits.push('new')
+        if (typeof e.pctChange === 'number') bits.push(`${Math.round(e.pctChange * 10) / 10}%`)
+        return bits.join(' · ')
+      })
+
+    return scored.length ? scored.join(' | ') : 'Evidence indicates an acceleration vs the prior fortnight.'
+  }, [])
+
   const runAnalysis = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -229,7 +250,12 @@ export default function Home() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div className="panel-2 p-4">
-                  <div className="text-sm font-semibold">Evidence</div>
+                  <div className="text-sm font-semibold">Why now</div>
+                  <div className="mt-2 rounded-lg p-3 text-xs" style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(234,252,250,0.75)' }}>
+                    {whyNow(n)}
+                  </div>
+
+                  <div className="mt-4 text-sm font-semibold">Evidence</div>
                   <ul className="mt-3 space-y-3 text-sm" style={{ color: 'var(--muted)' }}>
                     {(n.evidence || []).slice(0, 8).map((e, idx) => (
                       <li key={idx} className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>

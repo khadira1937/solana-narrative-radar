@@ -267,7 +267,8 @@ export default function Home() {
                           <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-2)' }}>
                             {typeof e.value === 'number' && <span className="tag">cur {e.value}</span>}
                             {typeof e.delta === 'number' && <span className="tag">Δ {e.delta}</span>}
-                            {e.pctChange === null && <span className="tag">pct new</span>}
+                            {typeof e.value === 'string' && e.value.includes('unavailable') && <span className="tag">unavailable</span>}
+                            {e.pctChange === null && !(typeof e.value === 'string' && e.value.includes('unavailable')) && <span className="tag">pct new</span>}
                             {typeof e.pctChange === 'number' && <span className="tag">pct {Math.round(e.pctChange * 10) / 10}%</span>}
                           </div>
                         </div>
@@ -415,7 +416,8 @@ export default function Home() {
                       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-2)' }}>
                         {typeof e.value === 'number' && <span className="tag">cur {e.value}</span>}
                         {typeof e.delta === 'number' && <span className="tag">Δ {e.delta}</span>}
-                        {e.pctChange === null && <span className="tag">pct new</span>}
+                        {typeof e.value === 'string' && e.value.includes('unavailable') && <span className="tag">unavailable</span>}
+                        {e.pctChange === null && !(typeof e.value === 'string' && e.value.includes('unavailable')) && <span className="tag">pct new</span>}
                         {typeof e.pctChange === 'number' && <span className="tag">pct {Math.round(e.pctChange * 10) / 10}%</span>}
                       </div>
                     </div>

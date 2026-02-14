@@ -4,6 +4,7 @@ import { makeWindows, pctChange } from './windows'
 import { fetchRepoCommitCountSince, fetchRepoIssueAndPrCounts, fetchRepoMetrics } from './sources/github'
 import { countRssInWindow, fetchRss } from './sources/rss'
 import { fetchOnchainSignals } from './sources/solana'
+import { fetchProgramUsage } from './sources/usage'
 import { fetchXSignals } from './sources/x'
 import { CURATED_BLOGS, CURATED_DISCORD, CURATED_X } from './curated'
 import { ttl } from './ttlCache'
@@ -56,11 +57,14 @@ export async function generateRun(): Promise<RunPayload> {
 
   const CACHE_MS = Number(process.env.SIGNALS_CACHE_MS || 10 * 60 * 1000) // 10 minutes
 
-  const [repos, feeds, onchain, xSignals] = await Promise.all([
+  const [repos, feeds, onchain, usage, xSignals] = await Promise.all([
     ttl(`gh:metrics:${DEFAULT_REPOS.join(',')}`, CACHE_MS, () => fetchRepoMetrics(DEFAULT_REPOS)),
     ttl(`rss:${DEFAULT_FEEDS.map((f) => f.url).join('|')}`, CACHE_MS, () => fetchRss(DEFAULT_FEEDS, 30)),
     ttl(`sol:loader:${windows.current.from.toISOString()}:${windows.current.to.toISOString()}`, CACHE_MS, () =>
       fetchOnchainSignals({ current: windows.current, previous: windows.previous, limit: 300 }),
+    ),
+    ttl(`sol:usage:${windows.current.from.toISOString()}:${windows.current.to.toISOString()}`, CACHE_MS, () =>
+      fetchProgramUsage({ current: windows.current, previous: windows.previous }),
     ),
     ttl(`x:signals:${windows.current.from.toISOString()}:${windows.current.to.toISOString()}`, CACHE_MS, () =>
       fetchXSignals({ usernames: CURATED_X.map((l) => l.label), current: windows.current, previous: windows.previous }),
@@ -133,6 +137,18 @@ export async function generateRun(): Promise<RunPayload> {
           pctChange: onchain.pctChangeUpgradeableLoader,
           notes: `Current=${onchain.upgradeableLoaderTxCountCurrent}, Prev=${onchain.upgradeableLoaderTxCountPrevious}${onchain.upgradeableLoaderTxCountPrevious === 0 && onchain.upgradeableLoaderTxCountCurrent > 0 ? ' (new activity; prev was 0)' : ''}. Sample sigs: ${onchain.sampleSignatures.slice(0, 3).join(', ')}…`,
         },
+        ...(usage.length
+          ? [
+              {
+                label: 'Program usage watchlist (tx signatures sampled; cur vs prev)',
+                notes: usage
+                  .slice(0, 5)
+                  .map((u) => `${u.label}: cur=${u.cur}, prev=${u.prev}, Δ=${u.delta}${u.pct === null ? ', pct=new' : `, pct=${Math.round(u.pct * 10) / 10}%`} — https://solscan.io/account/${u.address}`)
+                  .join(' | '),
+              },
+            ]
+          : []),
+
         ...(onchain.topUpgradedProgramsCurrent.length
           ? [
               {

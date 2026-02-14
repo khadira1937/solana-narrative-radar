@@ -8,7 +8,7 @@ type NarrativeView = {
   title: string
   score: number
   summary: string
-  evidence?: { label: string; notes?: string; value?: string | number; sourceUrl?: string; delta?: number; pctChange?: number }[]
+  evidence?: { label: string; notes?: string; value?: string | number; sourceUrl?: string; delta?: number; pctChange?: number | null }[]
   ideas?: string[]
 }
 

@@ -112,7 +112,7 @@ export async function generateRun(): Promise<RunPayload> {
       id: 'onchain-program-velocity',
       title: 'On-chain shipping velocity is accelerating (deploy/upgrade + wallet participation)',
       score: scoreFromSignals({
-        onchainPct: onchain.pctChangeUpgradeableLoader,
+        onchainPct: onchain.pctChangeUpgradeableLoader ?? 0,
         githubPct: ((commitsPct ?? 0) + githubCommunityPct) / 2,
         rssPct: rssPct ?? 0,
         socialPct: xSignals.pctChangeTweets ?? 0,
@@ -128,6 +128,17 @@ export async function generateRun(): Promise<RunPayload> {
           pctChange: onchain.pctChangeUpgradeableLoader,
           notes: `Current=${onchain.upgradeableLoaderTxCountCurrent}, Prev=${onchain.upgradeableLoaderTxCountPrevious}${onchain.upgradeableLoaderTxCountPrevious === 0 && onchain.upgradeableLoaderTxCountCurrent > 0 ? ' (new activity; prev was 0)' : ''}. Sample sigs: ${onchain.sampleSignatures.slice(0, 3).join(', ')}…`,
         },
+        ...(onchain.topUpgradedProgramsCurrent.length
+          ? [
+              {
+                label: 'Top upgraded programs (sampled from current window)',
+                value: onchain.topUpgradedProgramsCurrent.length,
+                notes: onchain.topUpgradedProgramsCurrent
+                  .map((p) => `${p.programId} (x${p.upgrades})`)
+                  .join(' | '),
+              },
+            ]
+          : []),
         {
           label: 'Unique fee payers in loader tx sample (wallet participation proxy)',
           value: process.env.ONCHAIN_HYDRATE === '0' ? 'disabled' : onchain.uniqueFeePayersCurrent,
@@ -156,7 +167,7 @@ export async function generateRun(): Promise<RunPayload> {
     {
       id: 'dev-activity-fortnight',
       title: 'Developer activity is rising (commit momentum across core repos)',
-      score: scoreFromSignals({ githubPct: ((commitsPct ?? 0) + githubCommunityPct) / 2, rssPct: rssPct ?? 0, onchainPct: onchain.pctChangeUpgradeableLoader, socialPct: xSignals.pctChangeTweets ?? 0, bonus: 1 }),
+      score: scoreFromSignals({ githubPct: ((commitsPct ?? 0) + githubCommunityPct) / 2, rssPct: rssPct ?? 0, onchainPct: onchain.pctChangeUpgradeableLoader ?? 0, socialPct: xSignals.pctChangeTweets ?? 0, bonus: 1 }),
       summary:
         'We track commit counts on a curated set of Solana core repos and compare the last fortnight against the prior fortnight. This helps surface early infra/tooling narratives.',
       evidence: [
@@ -261,7 +272,7 @@ export async function generateRun(): Promise<RunPayload> {
       const score = scoreFromSignals({
         rssPct: pct ?? 0,
         githubPct: commitsPct ?? 0,
-        onchainPct: onchain.pctChangeUpgradeableLoader,
+        onchainPct: onchain.pctChangeUpgradeableLoader ?? 0,
         socialPct: xSignals.pctChangeTweets ?? 0,
         bonus: Math.min(3, cur / 3),
       })

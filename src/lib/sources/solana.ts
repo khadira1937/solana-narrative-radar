@@ -6,12 +6,17 @@ const BPF_UPGRADEABLE_LOADER = new PublicKey('BPFLoaderUpgradeab1e11111111111111
 export type OnchainSignals = {
   upgradeableLoaderTxCountCurrent: number
   upgradeableLoaderTxCountPrevious: number
-  pctChangeUpgradeableLoader: number
+  pctChangeUpgradeableLoader: number | null
+
   uniqueFeePayersCurrent: number
   uniqueFeePayersPrevious: number
-  pctChangeUniqueFeePayers: number
+  pctChangeUniqueFeePayers: number | null
+
   failureRateCurrentPct: number
   failureRatePreviousPct: number
+
+  topUpgradedProgramsCurrent: { programId: string; upgrades: number }[]
+
   sampleSignatures: string[]
 }
 
@@ -65,7 +70,7 @@ export async function fetchOnchainSignals(params: {
     return Number.isFinite(t) && t >= params.previous.from.getTime() && t < params.previous.to.getTime()
   })
 
-  const pct = prev.length === 0 ? (cur.length === 0 ? 0 : 999) : ((cur.length - prev.length) / prev.length) * 100
+  const pct = prev.length === 0 ? (cur.length === 0 ? 0 : null) : ((cur.length - prev.length) / prev.length) * 100
 
   // Extra on-chain indicators (lightweight, explainable):
   // - unique fee payers (wallet participation proxy)
@@ -106,19 +111,54 @@ export async function fetchOnchainSignals(params: {
   }
 
   const [curHyd, prevHyd] = await Promise.all([hydrate(curSample), hydrate(prevSample)])
-  const pctFeePayers = prevHyd.uniqueFeePayers === 0 ? (curHyd.uniqueFeePayers === 0 ? 0 : 999) : ((curHyd.uniqueFeePayers - prevHyd.uniqueFeePayers) / prevHyd.uniqueFeePayers) * 100
+  const pctFeePayers =
+    prevHyd.uniqueFeePayers === 0 ? (curHyd.uniqueFeePayers === 0 ? 0 : null) : ((curHyd.uniqueFeePayers - prevHyd.uniqueFeePayers) / prevHyd.uniqueFeePayers) * 100
+
+  // Top upgraded programs (judge-wow): parse a tiny tx sample and extract the program account
+  // from the Upgradeable Loader instruction account list.
+  let topUpgradedProgramsCurrent: { programId: string; upgrades: number }[] = []
+  if (process.env.ONCHAIN_HYDRATE !== '0') {
+    const UPGRADE_SAMPLE = Number(process.env.ONCHAIN_UPGRADE_SAMPLE || 20)
+    const sample = cur.slice(0, UPGRADE_SAMPLE)
+    const txs = await Promise.all(sample.map((s) => conn.getTransaction(s.signature, { maxSupportedTransactionVersion: 0 }).catch(() => null)))
+    const counts = new Map<string, number>()
+
+    for (const tx of txs) {
+      if (!tx) continue
+      const msg: any = tx.transaction.message as any
+      const keys: any[] = msg.accountKeys || msg.staticAccountKeys || msg.getAccountKeys?.().staticAccountKeys || []
+      const instructions: any[] = msg.instructions || []
+
+      for (const ix of instructions) {
+        const programId = keys[ix.programIdIndex]?.toBase58?.()
+        if (programId !== BPF_UPGRADEABLE_LOADER.toBase58()) continue
+        const accIdxs: number[] = ix.accounts || []
+        // For Upgrade instruction, index 1 is typically the program account being upgraded.
+        const programAcc = accIdxs.length >= 2 ? keys[accIdxs[1]]?.toBase58?.() : null
+        if (!programAcc) continue
+        counts.set(programAcc, (counts.get(programAcc) || 0) + 1)
+      }
+    }
+
+    topUpgradedProgramsCurrent = Array.from(counts.entries())
+      .map(([programId, upgrades]) => ({ programId, upgrades }))
+      .sort((a, b) => b.upgrades - a.upgrades)
+      .slice(0, 8)
+  }
 
   return {
     upgradeableLoaderTxCountCurrent: cur.length,
     upgradeableLoaderTxCountPrevious: prev.length,
-    pctChangeUpgradeableLoader: Math.round(pct * 10) / 10,
+    pctChangeUpgradeableLoader: pct === null ? null : Math.round(pct * 10) / 10,
 
     uniqueFeePayersCurrent: curHyd.uniqueFeePayers,
     uniqueFeePayersPrevious: prevHyd.uniqueFeePayers,
-    pctChangeUniqueFeePayers: Math.round(pctFeePayers * 10) / 10,
+    pctChangeUniqueFeePayers: pctFeePayers === null ? null : Math.round(pctFeePayers * 10) / 10,
 
     failureRateCurrentPct: curHyd.failureRatePct,
     failureRatePreviousPct: prevHyd.failureRatePct,
+
+    topUpgradedProgramsCurrent,
 
     sampleSignatures: sigs.slice(0, 10).map((s) => s.signature),
   }
